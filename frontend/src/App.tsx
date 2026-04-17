@@ -4,6 +4,7 @@ import HomePage from './components/pages/HomePage';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import RecruitmentPage from './components/recruitment/RecruitmentPage';
 import { ThemeProvider } from './context/ThemeContext'; 
 import './App.css';
 
@@ -24,6 +25,11 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/recruitment" element={
+              <ProtectedRoute>
+                <RecruitmentPage />
+              </ProtectedRoute>
+            } />
             <Route path="/" element={
               <ProtectedRoute>
                 <HomePage />

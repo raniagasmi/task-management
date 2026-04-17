@@ -4,9 +4,8 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Inject } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 
-import * as dotenv from 'dotenv';
-dotenv.confconst JWT_SECRET = process.env.JWT_SECRET;
-SECRET; 
+const JWT_SECRET = process.env.JWT_SECRET;
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(

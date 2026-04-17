@@ -70,6 +70,25 @@ services:
     ports:
       - "3002:3002"
 
+  recruitment-service:
+    build:
+      context: ./recruitment-service
+      dockerfile: Dockerfile
+    container_name: task-manager-recruitment-service
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      PORT: 3004
+      MONGODB_URI: mongodb://mongo:27017/recruitment_service
+      AI_PROVIDER: ${AI_PROVIDER}
+      AI_MODEL: ${AI_MODEL}
+      AI_API_URL: ${AI_API_URL}
+      AI_API_KEY: ${AI_API_KEY}
+    ports:
+      - "3004:3004"
+
   api-gateway:
     build:
       context: ./api-gateway
@@ -81,6 +100,8 @@ services:
         condition: service_started
       task-service:
         condition: service_started
+      recruitment-service:
+        condition: service_started
     environment:
       PORT: 3000
       JWT_SECRET: ${JWT_SECRET:-change_this_to_a_long_random_secret}
@@ -88,6 +109,8 @@ services:
       USER_SERVICE_PORT: 3001
       TASK_SERVICE_HOST: task-service
       TASK_SERVICE_PORT: 3002
+      RECRUITMENT_SERVICE_HOST: recruitment-service
+      RECRUITMENT_SERVICE_PORT: 3004
     ports:
       - "3000:3000"
 

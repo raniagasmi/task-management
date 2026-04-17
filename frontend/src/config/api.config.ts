@@ -19,5 +19,11 @@ export const API_ENDPOINTS = {
     ORDER: (id: string) => `/tasks/${id}/order`,
     ACTIVE: (id: string) => `/tasks/${id}/active`,
     BATCH_UPDATE_ORDERS: '/tasks/batch-update-orders',
+  },
+  RECRUITMENT: {
+    BASE: '/api/recruitment',
+    GENERATE: '/api/recruitment/generate',
+    CHAT: '/api/recruitment/chat',
+    LINKEDIN: '/api/recruitment/linkedin-post',
   }
 };

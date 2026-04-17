@@ -80,6 +80,9 @@ const HomePage = () => {
             <Button onClick={onDrawerOpen} colorScheme="teal" variant="outline" _hover={{ bg: 'teal.400', color: "white" }}>
               View Profile
             </Button>
+            <Button onClick={() => navigate('/recruitment')} colorScheme="purple" variant="outline" _hover={{ bg: 'purple.400', color: "white" }}>
+              Recruitment
+            </Button>
             <IconButton
               aria-label="Logout"
               variant="outline"
