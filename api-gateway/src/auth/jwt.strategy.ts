@@ -6,6 +6,12 @@ import { ClientProxy } from '@nestjs/microservices';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+interface JwtPayload {
+  userId: string;
+  email: string;
+  role: string;
+}
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
@@ -22,7 +28,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: any) {
+  validate(payload: JwtPayload) {
     try {
       console.log('JWT Payload:', payload);
 

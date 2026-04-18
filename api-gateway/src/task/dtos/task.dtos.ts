@@ -36,8 +36,8 @@ export class CreateTaskDto {
   priority?: TaskPriority = TaskPriority.MEDIUM;
 
   @IsString()
-  @IsNotEmpty()
-  assignedTo!: string;
+  @IsOptional()
+  assignedTo?: string;
 
   @IsNumber()
   @IsOptional()

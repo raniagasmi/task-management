@@ -34,9 +34,9 @@ export class TaskController {
   @UsePipes(new ValidationPipe())
   async create(
     @Body() createTaskDto: CreateTaskDto,
-    @Request() req: { user: { id: string; email: string } },
+    @Request() req: { user: { userId?: string; email: string } },
   ) {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) {
       throw new UnauthorizedException('User not authenticated');
     }
@@ -101,12 +101,16 @@ export class TaskController {
   async updateStatus(
     @Param('id') id: string,
     @Body() updateStatusDto: UpdateStatusDto,
-    @Request() req,
+    @Request() req: { user: { userId?: string } },
   ) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
     const result = await this.taskClient
       .send(
         { cmd: 'updateTaskStatus' },
-        { id, status: updateStatusDto.status, userId: req.user.id },
+        { id, status: updateStatusDto.status, userId },
       )
       .toPromise();
     return result;
@@ -114,9 +118,16 @@ export class TaskController {
 
   @Put(':id/active')
   @UsePipes(new ValidationPipe())
-  async updateActive(@Param('id') id: string, @Request() req) {
+  async updateActive(
+    @Param('id') id: string,
+    @Request() req: { user: { userId?: string } },
+  ) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
     const result = await this.taskClient
-      .send({ cmd: 'updateTaskActive' }, { id, userId: req.user.id })
+      .send({ cmd: 'updateTaskActive' }, { id, userId })
       .toPromise();
     return result;
   }

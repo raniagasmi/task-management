@@ -20,6 +20,7 @@ export class TaskService {
     console.log('Creating task with userId:', userId); 
     const task = this.taskRepository.create({
       ...createTaskDto,
+      assignedTo: createTaskDto.assignedTo ?? '',
       createdBy: userId,
       status: createTaskDto.status || TaskStatus.TODO,
       order: createTaskDto.order || 0,
