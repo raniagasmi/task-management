@@ -3,12 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { authService } from '../../services/auth.service';
 import { userService } from '../../services/user.service';
 import {
-  Flex, IconButton, Button, Avatar, Text, Box,
+  Flex, Avatar, Box,
   Drawer, DrawerBody, VStack, DrawerOverlay,
-  DrawerContent, useDisclosure, Tooltip
+  DrawerContent, useDisclosure
 } from '@chakra-ui/react';
-import { NotAllowedIcon } from '@chakra-ui/icons';
-import { User, UserRole } from '../../types/user';
+import { User } from '../../types/user';
 import { Profile } from '../profile/Profile';
 import Breezycherryblossoms from '../design/Breezycherrybossoms';
 import Particles from '../design/particles';
@@ -16,7 +15,7 @@ import Pattern from '../design/Pattern';
 import Hexagon from '../design/Hexagon';
 import ThemeSelector from '../selectors/ThemeSelector';
 import BannerSelector from '../selectors/BannerSelector';
-import TopNavbar from '../layout/TopNavbar';
+import SideNavbar from '../layout/SideNavbar';
 
 import Board from '../tasks/Board';
 
@@ -25,7 +24,6 @@ type BannerType = "Breezy" | "Particles" | "Pattern" | "Hexagon";
 const HomePage = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
   const { isOpen: isDrawerOpen, onOpen: onDrawerOpen, onClose: onDrawerClose } = useDisclosure();
@@ -37,13 +35,6 @@ const HomePage = () => {
       try {
         const userData = await userService.getCurrentUser();
         setUser(userData);
-
-        if (userData?.role === UserRole.ADMIN) {
-          const allUsers = await userService.getAllUsers();
-          setUsers(allUsers);
-        } else {
-          setUsers([]);
-        }
       } catch (error) {
         console.error('Failed to fetch user data:', error);
         authService.logout();
@@ -68,65 +59,16 @@ const HomePage = () => {
     navigate('/login');
   };
 
-  const isAdmin = user?.role === UserRole.ADMIN;
-
-  const Capitalize = (str?: string) => {
-    if (!str) return '';
-    return str.charAt(0).toUpperCase() + str.slice(1);
-  };
-
   if (loading) {
     return <div className="loading">Loading...</div>;
   }
 
   return (
-    <Flex bg="var(--light-color)" w="100vw" minH="100vh" direction="column">
-      <TopNavbar />
-      <Flex flex={1}>
-        {user && (
-          <Flex w={250} p={4} flexDirection="column" bg="var(--dark-color)" position="relative">
-            <Flex mb={4} gap={2} alignItems="center">
-              <Button onClick={onDrawerOpen} colorScheme="teal" variant="outline" _hover={{ bg: 'teal.400', color: "white" }}>
-                View Profile
-              </Button>
-              <IconButton
-                aria-label="Logout"
-                variant="outline"
-                colorScheme="teal"
-                _hover={{ bg: 'teal.400', color: "white" }}
-                onClick={handleLogout}
-                icon={<NotAllowedIcon />}
-              />
-            </Flex>
-
-            {isAdmin ? (
-              <Box userSelect="none" gap={6} display="flex" flexDirection="column" overflowY="auto">
-                {users.map((test) => (
-                  <Tooltip key={test.email} label={test.email} aria-label="A tooltip">
-                    <Flex style={{ display: 'flex', alignItems: 'center', padding: '3px', gap: '6px' }}>
-                      <Avatar name={`${test?.firstName} ${test?.lastName}`} />
-                      <Text color="var(--font-color)">
-                        {Capitalize(test?.firstName) + ' ' + Capitalize(test?.lastName)}
-                        {test?.email === user.email ? ' (Me)' : ''}
-                      </Text>
-                    </Flex>
-                  </Tooltip>
-                ))}
-              </Box>
-            ) : (
-              <Box p={3} borderRadius="md" bg="rgba(216,216,219,0.08)">
-                <Text color="var(--font-color)" fontWeight={600} mb={1}>
-                  Employee Workspace
-                </Text>
-                <Text color="var(--font-color)" fontSize="sm" opacity={0.9}>
-                  You can update your own profile and password from the profile drawer.
-                </Text>
-              </Box>
-            )}
-          </Flex>
-        )}
+    <Flex bg="var(--light-color)" w="100vw" minH="100vh">
+      <SideNavbar onProfileClick={onDrawerOpen} onLogoutClick={handleLogout} />
+      <Flex flex={1} direction="column">
         <Box flex={1} p={20} overflowY="auto">
-          <Board   />
+          <Board />
         </Box>
       </Flex>
       <ThemeSelector />

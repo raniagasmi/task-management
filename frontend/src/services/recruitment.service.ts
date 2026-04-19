@@ -38,15 +38,26 @@ export type ChatResponse =
 		};
 
 class RecruitmentService {
+	private buildAxiosErrorMessage(prefix: string, error: unknown): Error {
+		if (!axios.isAxiosError(error)) {
+			return new Error(prefix);
+		}
+
+		const responseMessage =
+			typeof error.response?.data?.message === 'string'
+				? error.response.data.message
+				: undefined;
+
+		const fallback = error.message || `HTTP ${error.response?.status ?? 'error'}`;
+		return new Error(`${prefix}: ${responseMessage ?? fallback}`);
+	}
+
 	async generateJobOffer(prompt: string): Promise<JobOffer> {
 		try {
 			const response = await api.post<JobOffer>(API_ENDPOINTS.RECRUITMENT.GENERATE, { prompt });
 			return response.data;
 		} catch (error) {
-			if (axios.isAxiosError(error)) {
-				throw new Error(`Failed to generate job offer: ${error.message}`);
-			}
-			throw error;
+			throw this.buildAxiosErrorMessage('Failed to generate job offer', error);
 		}
 	}
 
@@ -58,10 +69,7 @@ class RecruitmentService {
 			});
 			return response.data;
 		} catch (error) {
-			if (axios.isAxiosError(error)) {
-				throw new Error(`Failed to send chat message: ${error.message}`);
-			}
-			throw error;
+			throw this.buildAxiosErrorMessage('Failed to send chat message', error);
 		}
 	}
 
@@ -72,10 +80,7 @@ class RecruitmentService {
 			});
 			return response.data;
 		} catch (error) {
-			if (axios.isAxiosError(error)) {
-				throw new Error(`Failed to generate LinkedIn post: ${error.message}`);
-			}
-			throw error;
+			throw this.buildAxiosErrorMessage('Failed to generate LinkedIn post', error);
 		}
 	}
 }

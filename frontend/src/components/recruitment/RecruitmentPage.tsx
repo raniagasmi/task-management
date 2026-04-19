@@ -16,7 +16,9 @@ import {
 	useToast,
 } from '@chakra-ui/react';
 import { JobOffer, recruitmentService } from '../../services/recruitment.service';
-import TopNavbar from '../layout/TopNavbar';
+import SideNavbar from '../layout/SideNavbar';
+import { authService } from '../../services/auth.service';
+import { useNavigate } from 'react-router-dom';
 
 type RecruitmentFlowState =
 	| 'idle'
@@ -37,6 +39,7 @@ interface ChatMessage {
 const createMessageId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 const RecruitmentPage = () => {
+	const navigate = useNavigate();
 	const [state, setState] = useState<RecruitmentFlowState>('idle');
 	const [prompt, setPrompt] = useState('');
 	const [jobOffer, setJobOffer] = useState<JobOffer | null>(null);
@@ -51,6 +54,11 @@ const RecruitmentPage = () => {
 		},
 	]);
 	const toast = useToast();
+
+	const handleLogout = () => {
+		authService.logout();
+		navigate('/login');
+	};
 
 	const sessionId = useMemo(() => {
 		if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
@@ -167,9 +175,9 @@ const RecruitmentPage = () => {
 	};
 
 	return (
-		<Box bg="var(--light-color)" minH="100vh">
-			<TopNavbar />
-			<Stack maxW="1400px" mx="auto" spacing={6} px={{ base: 4, md: 8 }} py={{ base: 6, md: 8 }}>
+		<Flex bg="var(--light-color)" minH="100vh">
+			<SideNavbar onLogoutClick={handleLogout} />
+			<Stack flex={1} maxW="1400px" spacing={6} px={{ base: 4, md: 8 }} py={{ base: 6, md: 8 }}>
 				<Box>
 					<Heading size="lg" color="var(--font-color)">
 						Recruitment AI Copilot
@@ -333,7 +341,7 @@ const RecruitmentPage = () => {
 					</Box>
 				</Grid>
 			</Stack>
-		</Box>
+		</Flex>
 	);
 };
 

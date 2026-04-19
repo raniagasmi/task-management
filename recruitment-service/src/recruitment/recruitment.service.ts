@@ -1,6 +1,7 @@
 import {
 	BadGatewayException,
 	BadRequestException,
+	HttpException,
 	Injectable,
 	InternalServerErrorException,
 	Logger,
@@ -242,7 +243,7 @@ export class RecruitmentService {
 		try {
 			aiResponse = await this.aiService.generateText(prompt);
 		} catch (error) {
-			if (error instanceof BadGatewayException) {
+			if (error instanceof HttpException) {
 				throw error;
 			}
 			const reason = error instanceof Error ? error.message : 'Unknown AI error';

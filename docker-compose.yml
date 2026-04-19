@@ -76,16 +76,13 @@ services:
       dockerfile: Dockerfile
     container_name: task-manager-recruitment-service
     restart: unless-stopped
+    env_file:
+      - ./recruitment-service/.env
     depends_on:
       mongo:
         condition: service_healthy
     environment:
-      PORT: 3004
       MONGODB_URI: mongodb://mongo:27017/recruitment_service
-      AI_PROVIDER: ${AI_PROVIDER}
-      AI_MODEL: ${AI_MODEL}
-      AI_API_URL: ${AI_API_URL}
-      AI_API_KEY: ${AI_API_KEY}
     ports:
       - "3004:3004"
 

@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Put,
+  Delete,
   Param,
   UseGuards,
   NotFoundException,
@@ -94,6 +95,13 @@ export class UserController {
     }
   }
 
+  @Get('audit-logs')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  async getAuditLogs() {
+    return this.auditService.findAll();
+  }
+
   @Get(':id')
   @UseGuards(RolesGuard)
   @Roles('admin')
@@ -108,6 +116,24 @@ export class UserController {
       console.error('Error finding user by id:', error);
       throw error;
     }
+  }
+
+  @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  async deleteUser(@Param('id') id: string, @Req() req: Request) {
+    const currentUser = req.user as { userId?: string; email?: string; role?: string } | undefined;
+    await this.userService.delete(id);
+    await this.auditService.logAction({
+      actorId: currentUser?.userId ?? 'unknown',
+      actorEmail: currentUser?.email ?? 'unknown',
+      actorRole: currentUser?.role ?? 'admin',
+      action: 'user.deleted',
+      resource: 'users',
+      resourceId: id,
+    });
+
+    return { message: 'User deleted successfully' };
   }
 
   @Put(':id')
@@ -196,10 +222,4 @@ export class UserController {
     }
   }
 
-  @Get('audit-logs')
-  @UseGuards(RolesGuard)
-  @Roles('admin')
-  async getAuditLogs() {
-    return this.auditService.findAll();
-  }
 }
