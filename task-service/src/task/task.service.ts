@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Task, TaskStatus } from '../entities/task.entity';
-import { CreateTaskDto, UpdateTaskDto } from '../dto/task.dto';
+import { CreateTaskBatchDto, CreateTaskDto, UpdateTaskDto } from '../dto/task.dto';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -27,6 +27,17 @@ export class TaskService {
     });
     console.log('Task to be created:', task); 
     return await this.taskRepository.save(task);
+  }
+
+  async createBatch(input: CreateTaskBatchDto): Promise<Task[]> {
+    const createdTasks: Task[] = [];
+
+    for (const taskInput of input.tasks) {
+      const created = await this.create(taskInput, input.userId);
+      createdTasks.push(created);
+    }
+
+    return createdTasks;
   }
 
   async findAll(): Promise<Task[]> {

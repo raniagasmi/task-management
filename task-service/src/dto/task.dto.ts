@@ -27,6 +27,14 @@ export class CreateTaskDto {
   @IsNumber()
   @IsOptional()
   order?: number;
+
+  @IsString()
+  @IsOptional()
+  conversationId?: string;
+
+  @IsString()
+  @IsOptional()
+  proposalId?: string;
 }
 
 export class UpdateTaskDto {
@@ -61,4 +69,20 @@ export class UpdateTaskDto {
   @IsNumber()
   @IsOptional()
   order?: number;
+
+  @IsString()
+  @IsOptional()
+  conversationId?: string;
+
+  @IsString()
+  @IsOptional()
+  proposalId?: string;
+}
+
+export class CreateTaskBatchDto {
+  @IsArray()
+  tasks!: CreateTaskDto[];
+
+  @IsString()
+  userId!: string;
 }

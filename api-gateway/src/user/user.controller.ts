@@ -152,6 +152,10 @@ export class UserController {
         throw new ForbiddenException('You can only update your own profile');
       }
 
+      if (currentUser.role !== 'admin' && 'role' in (updateUserDto ?? {})) {
+        throw new ForbiddenException('Only admins can assign roles');
+      }
+
       const user = await this.userService.findById(id);
       if (!user) {
         throw new NotFoundException(`User with id ${id} not found`);

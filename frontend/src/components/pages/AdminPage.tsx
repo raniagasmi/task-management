@@ -41,9 +41,11 @@ import { useNavigate } from 'react-router-dom';
 
 const AdminPage = () => {
 	const navigate = useNavigate();
+  const USERS_PER_PAGE = 3;
   const [users, setUsers] = useState<User[]>([]);
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [editForm, setEditForm] = useState({ firstName: '', lastName: '', email: '', role: UserRole.EMPLOYEE });
   const toast = useToast();
@@ -93,6 +95,22 @@ const AdminPage = () => {
       return byEmail || byId;
     });
   }, [logs, selectedUser]);
+
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(users.length / USERS_PER_PAGE)),
+    [users.length],
+  );
+
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (currentPage - 1) * USERS_PER_PAGE;
+    return users.slice(startIndex, startIndex + USERS_PER_PAGE);
+  }, [users, currentPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const openDetails = (user: User) => {
     setSelectedUser(user);
@@ -220,7 +238,7 @@ const AdminPage = () => {
                     <Td colSpan={4}><Text color="gray.500">No users found.</Text></Td>
                   </Tr>
                 ) : (
-                  users.map((user) => (
+                  paginatedUsers.map((user) => (
                     <Tr key={user.id}>
                       <Td fontWeight={600}>{user.firstName} {user.lastName}</Td>
                       <Td>{user.email}</Td>
@@ -251,6 +269,48 @@ const AdminPage = () => {
               </Tbody>
             </Table>
           </Box>
+
+          {!loading && users.length > 0 && (
+            <HStack justify="space-between" px={6} py={4} borderTop="1px solid" borderColor="gray.100">
+              <Text fontSize="sm" color="gray.600">
+                Page {currentPage} of {totalPages}
+              </Text>
+              <HStack spacing={2}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  isDisabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                {Array.from({ length: totalPages }, (_, index) => {
+                  const page = index + 1;
+                  const isActive = page === currentPage;
+
+                  return (
+                    <Button
+                      key={page}
+                      size="sm"
+                      variant={isActive ? 'solid' : 'outline'}
+                      colorScheme={isActive ? 'teal' : undefined}
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </Button>
+                  );
+                })}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  isDisabled={currentPage === totalPages}
+                >
+                  Next
+                </Button>
+              </HStack>
+            </HStack>
+          )}
         </Box>
 
         <Modal isOpen={detailsModal.isOpen} onClose={detailsModal.onClose} isCentered>
@@ -330,6 +390,11 @@ const AdminPage = () => {
                     <option value={UserRole.ADMIN}>admin</option>
                     <option value={UserRole.MANAGER}>manager</option>
                     <option value={UserRole.EMPLOYEE}>employee</option>
+                    <option value={UserRole.DEVELOPER}>developer</option>
+                    <option value={UserRole.SALES_REP}>sales rep</option>
+                    <option value={UserRole.HR}>hr</option>
+                    <option value={UserRole.FINANCE}>finance</option>
+                    <option value={UserRole.MARKETER}>marketer</option>
                   </Select>
                 </FormControl>
               </Stack>

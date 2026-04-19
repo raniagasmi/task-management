@@ -86,6 +86,29 @@ services:
     ports:
       - "3004:3004"
 
+  conversation-service:
+    build:
+      context: ./conversation-service
+      dockerfile: Dockerfile
+    container_name: task-manager-conversation-service
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+      task-service:
+        condition: service_started
+    environment:
+      PORT: 3006
+      MONGO_URI: mongodb://mongo:27017/conversation_service
+      USER_SERVICE_HOST: user-service
+      USER_SERVICE_PORT: 3005
+      TASK_SERVICE_HOST: task-service
+      TASK_SERVICE_PORT: 3002
+    ports:
+      - "3006:3006"
+
   api-gateway:
     build:
       context: ./api-gateway
@@ -108,6 +131,8 @@ services:
       TASK_SERVICE_PORT: 3002
       RECRUITMENT_SERVICE_HOST: recruitment-service
       RECRUITMENT_SERVICE_PORT: 3004
+      CONVERSATION_SERVICE_HOST: ${CONVERSATION_SERVICE_HOST:-host.docker.internal}
+      CONVERSATION_SERVICE_PORT: ${CONVERSATION_SERVICE_PORT:-3006}
     ports:
       - "3000:3000"
 

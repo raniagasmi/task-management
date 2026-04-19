@@ -1,7 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { TaskService } from './task.service';
-import { CreateTaskDto, UpdateTaskDto } from '../dto/task.dto';
+import { CreateTaskBatchDto, CreateTaskDto, UpdateTaskDto } from '../dto/task.dto';
 
 @Controller()
 export class TaskController {
@@ -11,6 +11,11 @@ export class TaskController {
   create(@Payload() payload: { createTaskDto: CreateTaskDto; userId: string }) {
     console.log('Received payload:', payload); 
     return this.taskService.create(payload.createTaskDto, payload.userId);
+  }
+
+  @MessagePattern({ cmd: 'createTasksBatch' })
+  createBatch(@Payload() payload: CreateTaskBatchDto) {
+    return this.taskService.createBatch(payload);
   }
 
   @MessagePattern({ cmd: 'findAllTasks' })

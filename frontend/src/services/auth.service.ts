@@ -16,6 +16,8 @@ interface RegisterData {
 
 interface User {
   id: string;
+  _id?: string;
+  userId?: string;
   email: string;
   firstName?: string;
   lastName?: string;
@@ -36,8 +38,11 @@ interface JwtPayload {
 
 const normalizeRole = (role?: string) => role?.toLowerCase() ?? '';
 
+const normalizeUserId = (user: User): string => user.id || user._id || user.userId || '';
+
 const normalizeUser = (user: User): User => ({
   ...user,
+  id: normalizeUserId(user),
   role: normalizeRole(user.role),
 });
 

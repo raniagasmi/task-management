@@ -6,11 +6,10 @@ import { UserRole } from '../../types/user';
 import logoImage from '../../assets/images/logo.png';
 
 interface SideNavbarProps {
-  onProfileClick?: () => void;
   onLogoutClick?: () => void;
 }
 
-const SideNavbar = ({ onProfileClick, onLogoutClick }: SideNavbarProps) => {
+const SideNavbar = ({ onLogoutClick }: SideNavbarProps) => {
   const navigate = useNavigate();
   const currentUser = authService.getCurrentUser();
   const isAdmin = currentUser?.role?.toLowerCase() === UserRole.ADMIN;
@@ -61,6 +60,9 @@ const SideNavbar = ({ onProfileClick, onLogoutClick }: SideNavbarProps) => {
           <Text as={NavLink} to="/" sx={navLinkSx}>
             Tasks
           </Text>
+          <Text as={NavLink} to="/collaboration" sx={navLinkSx}>
+            Collaboration
+          </Text>
           {isAdmin && (
             <>
               <Text as={NavLink} to="/recruitment" sx={navLinkSx}>
@@ -80,14 +82,7 @@ const SideNavbar = ({ onProfileClick, onLogoutClick }: SideNavbarProps) => {
         </Badge>
 
         <Button
-          onClick={() => {
-            if (onProfileClick) {
-              onProfileClick();
-              return;
-            }
-
-            navigate('/');
-          }}
+          onClick={() => navigate('/profile')}
           colorScheme="teal"
           variant="outline"
           size="sm"

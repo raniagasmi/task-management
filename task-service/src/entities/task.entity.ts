@@ -43,6 +43,12 @@ export class Task {
   @Column({ type: 'varchar', length: 255 })
   createdBy!: string;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  conversationId?: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  proposalId?: string;
+
   
 
  

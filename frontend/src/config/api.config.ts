@@ -26,5 +26,14 @@ export const API_ENDPOINTS = {
     GENERATE: '/api/recruitment/generate',
     CHAT: '/api/recruitment/chat',
     LINKEDIN: '/api/recruitment/linkedin-post',
-  }
+  },
+  COLLABORATION: {
+    BASE: '/collaboration',
+    CONVERSATIONS: '/collaboration/conversations',
+    CONVERSATIONS_BY_USER: (userId: string) => `/collaboration/conversations/user/${userId}`,
+    MESSAGES: (conversationId: string) => `/collaboration/conversations/${conversationId}/messages`,
+    AI_DECOMPOSE: (conversationId: string) => `/collaboration/conversations/${conversationId}/ai-decompose`,
+    APPROVE_PROPOSAL: (proposalId: string) => `/collaboration/proposals/${proposalId}/approve`,
+    REJECT_PROPOSAL: (proposalId: string) => `/collaboration/proposals/${proposalId}/reject`,
+  },
 };

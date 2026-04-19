@@ -1,11 +1,13 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import HomePage from './components/pages/HomePage';
+import ProfilePage from './components/pages/ProfilePage';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import RecruitmentPage from './components/recruitment/RecruitmentPage';
 import AdminPage from './components/pages/AdminPage';
+import CollaborationPage from './components/collaboration/CollaborationPage';
 import { ThemeProvider } from './context/ThemeContext'; 
 import { UserRole } from './types/user';
 import './App.css';
@@ -32,6 +34,11 @@ function App() {
                 <RecruitmentPage />
               </ProtectedRoute>
             } />
+            <Route path="/collaboration" element={
+              <ProtectedRoute>
+                <CollaborationPage />
+              </ProtectedRoute>
+            } />
             <Route path="/admin" element={
               <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
                 <AdminPage />
@@ -43,6 +50,11 @@ function App() {
               </ProtectedRoute>
             }>
             </Route>
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            } />
           </Routes>
         </BrowserRouter>
       </ThemeProvider>

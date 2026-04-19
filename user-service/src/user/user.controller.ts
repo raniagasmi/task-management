@@ -70,6 +70,9 @@ export class UserController {
         if (currentUser.role !== 'admin' && currentUser.userId !== id) {
             throw new ForbiddenException('You can only update your own profile');
         }
+        if (currentUser.role !== 'admin' && 'role' in (updateUserDto ?? {})) {
+            throw new ForbiddenException('Only admins can assign roles');
+        }
         return this.userService.update(id, updateUserDto);
     }
 

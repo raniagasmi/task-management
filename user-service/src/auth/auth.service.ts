@@ -16,18 +16,14 @@ export class AuthService {
 
     async register(createUserDto: CreateUserDto): Promise<{ token: string; user: Partial<UserDocument> }> {
         try {
-            const { email, password, role } = createUserDto;
+            const { email, password } = createUserDto;
 
             const existingUser = await this.userModel.findOne({ email });
             if (existingUser) {
                 throw new ConflictException('User with this email already exists');
             }
 
-            if (role && !Object.values(UserRole).includes(role)) {
-                throw new BadRequestException('Invalid role specified');
-            }
-
-            const userRole = role || UserRole.EMPLOYEE;
+            const userRole = UserRole.EMPLOYEE;
 
             const hashedPassword = await bcrypt.hash(password, keys.bcryptSaltRounds);
 
