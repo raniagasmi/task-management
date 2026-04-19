@@ -8,7 +8,7 @@ import {
   DrawerContent, useDisclosure, Tooltip
 } from '@chakra-ui/react';
 import { NotAllowedIcon } from '@chakra-ui/icons';
-import { User } from '../../types/user';
+import { User, UserRole } from '../../types/user';
 import { Profile } from '../profile/Profile';
 import Breezycherryblossoms from '../design/Breezycherrybossoms';
 import Particles from '../design/particles';
@@ -16,6 +16,7 @@ import Pattern from '../design/Pattern';
 import Hexagon from '../design/Hexagon';
 import ThemeSelector from '../selectors/ThemeSelector';
 import BannerSelector from '../selectors/BannerSelector';
+import TopNavbar from '../layout/TopNavbar';
 
 import Board from '../tasks/Board';
 
@@ -37,8 +38,12 @@ const HomePage = () => {
         const userData = await userService.getCurrentUser();
         setUser(userData);
 
-        const allUsers = await userService.getAllUsers();
-        setUsers(allUsers);
+        if (userData?.role === UserRole.ADMIN) {
+          const allUsers = await userService.getAllUsers();
+          setUsers(allUsers);
+        } else {
+          setUsers([]);
+        }
       } catch (error) {
         console.error('Failed to fetch user data:', error);
         authService.logout();
@@ -63,6 +68,8 @@ const HomePage = () => {
     navigate('/login');
   };
 
+  const isAdmin = user?.role === UserRole.ADMIN;
+
   const Capitalize = (str?: string) => {
     if (!str) return '';
     return str.charAt(0).toUpperCase() + str.slice(1);
@@ -73,44 +80,55 @@ const HomePage = () => {
   }
 
   return (
-    <Flex bg="var(--light-color)" w="100vw" h="100vh">
-      {user && (
-        <Flex w={250} p={4} flexDirection="column" bg="var(--dark-color)" position="relative">
-          <Flex mb={4} gap={2} alignItems="center">
-            <Button onClick={onDrawerOpen} colorScheme="teal" variant="outline" _hover={{ bg: 'teal.400', color: "white" }}>
-              View Profile
-            </Button>
-            <Button onClick={() => navigate('/recruitment')} colorScheme="purple" variant="outline" _hover={{ bg: 'purple.400', color: "white" }}>
-              Recruitment
-            </Button>
-            <IconButton
-              aria-label="Logout"
-              variant="outline"
-              colorScheme="teal"
-              _hover={{ bg: 'teal.400', color: "white" }}
-              onClick={handleLogout}
-              icon={<NotAllowedIcon />}
-            />
-          </Flex>
+    <Flex bg="var(--light-color)" w="100vw" minH="100vh" direction="column">
+      <TopNavbar />
+      <Flex flex={1}>
+        {user && (
+          <Flex w={250} p={4} flexDirection="column" bg="var(--dark-color)" position="relative">
+            <Flex mb={4} gap={2} alignItems="center">
+              <Button onClick={onDrawerOpen} colorScheme="teal" variant="outline" _hover={{ bg: 'teal.400', color: "white" }}>
+                View Profile
+              </Button>
+              <IconButton
+                aria-label="Logout"
+                variant="outline"
+                colorScheme="teal"
+                _hover={{ bg: 'teal.400', color: "white" }}
+                onClick={handleLogout}
+                icon={<NotAllowedIcon />}
+              />
+            </Flex>
 
-          <Box userSelect="none" gap={6} display="flex" flexDirection="column" overflowY="auto">
-            {users.map((test) => (
-              <Tooltip key={test.email} label={test.email} aria-label="A tooltip">
-                <Flex style={{ display: 'flex', alignItems: 'center', padding: '3px', gap: '6px' }}>
-                  <Avatar name={`${test?.firstName} ${test?.lastName}`} />
-                  <Text color="var(--font-color)">
-                    {Capitalize(test?.firstName) + ' ' + Capitalize(test?.lastName)}
-                    {test?.email === user.email ? ' (Me)' : ''}
-                  </Text>
-                </Flex>
-              </Tooltip>
-            ))}
-          </Box>
-        </Flex>
-      )}
-      <Box flex={1} p={20} overflowY="auto">
-        <Board   />
-      </Box>
+            {isAdmin ? (
+              <Box userSelect="none" gap={6} display="flex" flexDirection="column" overflowY="auto">
+                {users.map((test) => (
+                  <Tooltip key={test.email} label={test.email} aria-label="A tooltip">
+                    <Flex style={{ display: 'flex', alignItems: 'center', padding: '3px', gap: '6px' }}>
+                      <Avatar name={`${test?.firstName} ${test?.lastName}`} />
+                      <Text color="var(--font-color)">
+                        {Capitalize(test?.firstName) + ' ' + Capitalize(test?.lastName)}
+                        {test?.email === user.email ? ' (Me)' : ''}
+                      </Text>
+                    </Flex>
+                  </Tooltip>
+                ))}
+              </Box>
+            ) : (
+              <Box p={3} borderRadius="md" bg="rgba(216,216,219,0.08)">
+                <Text color="var(--font-color)" fontWeight={600} mb={1}>
+                  Employee Workspace
+                </Text>
+                <Text color="var(--font-color)" fontSize="sm" opacity={0.9}>
+                  You can update your own profile and password from the profile drawer.
+                </Text>
+              </Box>
+            )}
+          </Flex>
+        )}
+        <Box flex={1} p={20} overflowY="auto">
+          <Board   />
+        </Box>
+      </Flex>
       <ThemeSelector />
 
       <Drawer onClose={onDrawerClose} placement="left" isOpen={isDrawerOpen} size="xl">

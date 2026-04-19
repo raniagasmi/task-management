@@ -15,6 +15,8 @@ import {
 import { ClientProxy } from '@nestjs/microservices';
 import { Inject } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 import {
   CreateTaskDto,
   UpdateTaskDto,
@@ -67,6 +69,8 @@ export class TaskController {
 
   @Put(':id')
   @UsePipes(new ValidationPipe())
+  @UseGuards(RolesGuard)
+  @Roles('admin')
   async update(
     @Param('id') id: string,
     @Body() updateTaskDto: UpdateTaskDto,
@@ -82,6 +86,8 @@ export class TaskController {
   }
 
   @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
   async remove(@Param('id') id: string): Promise<{ message: string }> {
     const result = await this.taskClient
       .send<{ message: string } | undefined>({ cmd: 'removeTask' }, id)

@@ -1,9 +1,11 @@
-import { Controller, Get, Put, Delete, Param, Body, UseGuards, Req, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Put, Delete, Param, Body, UseGuards, Req, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UpdateUserDto } from '../dto/user.dto';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Request } from 'express';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 
 @Controller('users')
 export class UserController {
@@ -19,7 +21,8 @@ export class UserController {
     }
 
     @Get('all')
-    @UseGuards(JwtAuthGuard)
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('admin')
     async getAllUsers(@Req() req: Request) {
         try {
             if (!req.user) {
@@ -45,16 +48,34 @@ export class UserController {
 
 
     @Get(':id')
-    async findById(@Param('id') id: string) {
+    @UseGuards(JwtAuthGuard)
+    async findById(@Param('id') id: string, @Req() req: Request) {
+        const currentUser = req.user as { userId?: string; role?: string } | undefined;
+        if (!currentUser?.userId) {
+            throw new ForbiddenException('User not authenticated');
+        }
+        if (currentUser.role !== 'admin' && currentUser.userId !== id) {
+            throw new ForbiddenException('You can only view your own profile');
+        }
         return this.userService.findById(id);
     }
 
     @Put(':id')
-    async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    @UseGuards(JwtAuthGuard)
+    async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto, @Req() req: Request) {
+        const currentUser = req.user as { userId?: string; role?: string } | undefined;
+        if (!currentUser?.userId) {
+            throw new ForbiddenException('User not authenticated');
+        }
+        if (currentUser.role !== 'admin' && currentUser.userId !== id) {
+            throw new ForbiddenException('You can only update your own profile');
+        }
         return this.userService.update(id, updateUserDto);
     }
 
     @Delete(':id')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('admin')
     async delete(@Param('id') id: string) {
         await this.userService.delete(id);
         return { message: 'User deleted successfully' };

@@ -16,6 +16,7 @@ import {
 	useToast,
 } from '@chakra-ui/react';
 import { JobOffer, recruitmentService } from '../../services/recruitment.service';
+import TopNavbar from '../layout/TopNavbar';
 
 type RecruitmentFlowState =
 	| 'idle'
@@ -166,8 +167,9 @@ const RecruitmentPage = () => {
 	};
 
 	return (
-		<Box bg="var(--light-color)" minH="100vh" px={{ base: 4, md: 8 }} py={{ base: 6, md: 8 }}>
-			<Stack maxW="1400px" mx="auto" spacing={6}>
+		<Box bg="var(--light-color)" minH="100vh">
+			<TopNavbar />
+			<Stack maxW="1400px" mx="auto" spacing={6} px={{ base: 4, md: 8 }} py={{ base: 6, md: 8 }}>
 				<Box>
 					<Heading size="lg" color="var(--font-color)">
 						Recruitment AI Copilot

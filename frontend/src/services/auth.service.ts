@@ -34,6 +34,13 @@ interface JwtPayload {
   exp: number;
 }
 
+const normalizeRole = (role?: string) => role?.toLowerCase() ?? '';
+
+const normalizeUser = (user: User): User => ({
+  ...user,
+  role: normalizeRole(user.role),
+});
+
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     try {
@@ -52,7 +59,7 @@ export const authService = {
       localStorage.setItem('token', access_token);
 
       // Store user data
-      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('user', JSON.stringify(normalizeUser(user)));
 
       return response.data;
     } catch (error: unknown) {
@@ -81,7 +88,7 @@ export const authService = {
       localStorage.setItem('token', access_token);
 
       // Store user data
-      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('user', JSON.stringify(normalizeUser(user)));
 
       return response.data;
     } catch (error: unknown) {
@@ -114,10 +121,19 @@ export const authService = {
         return null;
       }
 
-      return JSON.parse(userStr);
+      return normalizeUser(JSON.parse(userStr));
     } catch (error) {
       console.error('Error getting current user:', error);
       authService.logout();
+      return null;
+    }
+  },
+
+  getStoredUserRole: (): string | null => {
+    try {
+      const currentUser = authService.getCurrentUser();
+      return currentUser?.role ?? null;
+    } catch {
       return null;
     }
   },

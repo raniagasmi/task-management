@@ -5,13 +5,17 @@ import {
   Param,
   UseGuards,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 import { Request } from 'express';
 import { Req, Body } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { Inject } from '@nestjs/common';
+import { AuditService } from './audit.service';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard)
@@ -19,6 +23,7 @@ export class UserController {
   constructor(
     private readonly userService: UserService,
     @Inject('USER_SERVICE') private readonly userClient: ClientProxy,
+    private readonly auditService: AuditService,
   ) {}
 
   @Get('me')
@@ -35,12 +40,22 @@ export class UserController {
   }
 
   @Get('all')
-  async getAllUsers() {
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  async getAllUsers(@Req() req: Request) {
     try {
       console.log('Fetching all users');
+      const currentUser = req.user as { userId?: string; email?: string; role?: string } | undefined;
       const result = await this.userClient
         .send({ cmd: 'findAllUsers' }, {})
         .toPromise();
+      await this.auditService.logAction({
+        actorId: currentUser?.userId ?? 'unknown',
+        actorEmail: currentUser?.email ?? 'unknown',
+        actorRole: currentUser?.role ?? 'admin',
+        action: 'users.view_all',
+        resource: 'users',
+      });
       console.log('All users result:', result);
       return result;
     } catch (error) {
@@ -64,6 +79,8 @@ export class UserController {
   }
 
   @Get('email/:email')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
   async getUserByEmail(@Param('email') email: string) {
     try {
       const user = await this.userService.findByEmail(email);
@@ -78,6 +95,8 @@ export class UserController {
   }
 
   @Get(':id')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
   async getUserByIdRoute(@Param('id') id: string) {
     try {
       const user = await this.userService.findById(id);
@@ -92,13 +111,41 @@ export class UserController {
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() updateUserDto: any) {
+  async update(
+    @Param('id') id: string,
+    @Body() updateUserDto: any,
+    @Req() req: Request,
+  ) {
     try {
+      const currentUser = req.user as { userId?: string; email?: string; role?: string } | undefined;
+      if (!currentUser?.userId) {
+        throw new ForbiddenException('User not authenticated');
+      }
+
+      if (currentUser.role !== 'admin' && currentUser.userId !== id) {
+        throw new ForbiddenException('You can only update your own profile');
+      }
+
       const user = await this.userService.findById(id);
       if (!user) {
         throw new NotFoundException(`User with id ${id} not found`);
       }
-      return this.userService.update(id, updateUserDto);
+
+      const updated = await this.userService.update(id, updateUserDto);
+
+      if (currentUser.role === 'admin') {
+        await this.auditService.logAction({
+          actorId: currentUser.userId,
+          actorEmail: currentUser.email ?? 'unknown',
+          actorRole: currentUser.role,
+          action: 'user.updated',
+          resource: 'users',
+          resourceId: id,
+          metadata: { changedFields: Object.keys(updateUserDto ?? {}) },
+        });
+      }
+
+      return updated;
     } catch (error) {
       console.error('Error updating user:', error);
       throw error;
@@ -110,8 +157,18 @@ export class UserController {
   async updatePassword(
     @Param('id') id: string,
     @Body() updatePasswordDto: any,
+    @Req() req: Request,
   ) {
     try {
+      const currentUser = req.user as { userId?: string; email?: string; role?: string } | undefined;
+      if (!currentUser?.userId) {
+        throw new ForbiddenException('User not authenticated');
+      }
+
+      if (currentUser.role !== 'admin' && currentUser.userId !== id) {
+        throw new ForbiddenException('You can only update your own password');
+      }
+
       const user = await this.userService.findById(id);
       if (!user) {
         throw new NotFoundException(`User with id ${id} not found`);
@@ -120,10 +177,29 @@ export class UserController {
         id,
         updatePasswordDto,
       );
+
+      if (currentUser.role === 'admin') {
+        await this.auditService.logAction({
+          actorId: currentUser.userId,
+          actorEmail: currentUser.email ?? 'unknown',
+          actorRole: currentUser.role,
+          action: 'user.password_updated',
+          resource: 'users',
+          resourceId: id,
+        });
+      }
+
       return result;
     } catch (error) {
       console.error('Error updating password:', error);
       throw error;
     }
+  }
+
+  @Get('audit-logs')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  async getAuditLogs() {
+    return this.auditService.findAll();
   }
 }

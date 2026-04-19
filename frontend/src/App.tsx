@@ -5,7 +5,9 @@ import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import RecruitmentPage from './components/recruitment/RecruitmentPage';
+import AdminPage from './components/pages/AdminPage';
 import { ThemeProvider } from './context/ThemeContext'; 
+import { UserRole } from './types/user';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -26,8 +28,13 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/recruitment" element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
                 <RecruitmentPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin" element={
+              <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
+                <AdminPage />
               </ProtectedRoute>
             } />
             <Route path="/" element={
