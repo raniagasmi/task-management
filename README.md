@@ -1,103 +1,143 @@
-TASK-MANAGER-WITH-REAL-TIME-NOTIFICATIONS
-=========================================
+# Flexity
 
-_Empower Your Tasks with Instant Notifications Today!_
+Flexity is a microservices-based task management platform with authenticated user flows, AI-assisted collaboration, and live updates across chat, proposals, and task assignment events.
 
-![last-commit](https://img.shields.io/github/last-commit/KabsiMontassar/Task-Manager-with-Real-time-Notifications?style=flat&logo=git&logoColor=white&color=0080ff) ![repo-top-language](https://img.shields.io/github/languages/top/KabsiMontassar/Task-Manager-with-Real-time-Notifications?style=flat&color=0080ff) ![repo-language-count](https://img.shields.io/github/languages/count/KabsiMontassar/Task-Manager-with-Real-time-Notifications?style=flat&color=0080ff)
+## What It Includes
 
-_Built with the tools and technologies:_
+- JWT authentication and role-based access control
+- Task creation, assignment, and status tracking
+- Collaboration chat with conversation threads
+- AI-generated task proposals from project prompts
+- Admin approval and rejection of proposals
+- Real-time Socket.IO updates for messages, conversation creation, and task assignment notifications
+- Dockerized services for local development and deployment
 
-![Express](https://img.shields.io/badge/Express-000000.svg?style=flat&logo=Express&logoColor=white) ![JSON](https://img.shields.io/badge/JSON-000000.svg?style=flat&logo=JSON&logoColor=white) ![npm](https://img.shields.io/badge/npm-CB3837.svg?style=flat&logo=npm&logoColor=white) ![Autoprefixer](https://img.shields.io/badge/Autoprefixer-DD3735.svg?style=flat&logo=Autoprefixer&logoColor=white) ![TypeORM](https://img.shields.io/badge/TypeORM-FE0803.svg?style=flat&logo=TypeORM&logoColor=white) ![Chai](https://img.shields.io/badge/Chai-A30701.svg?style=flat&logo=Chai&logoColor=white) ![Mongoose](https://img.shields.io/badge/Mongoose-F04D35.svg?style=flat&logo=Mongoose&logoColor=white) ![PostCSS](https://img.shields.io/badge/PostCSS-DD3A0A.svg?style=flat&logo=PostCSS&logoColor=white) ![Mocha](https://img.shields.io/badge/Mocha-8D6748.svg?style=flat&logo=Mocha&logoColor=white) ![Prettier](https://img.shields.io/badge/Prettier-F7B93E.svg?style=flat&logo=Prettier&logoColor=black) ![.ENV](https://img.shields.io/badge/.ENV-ECD53F.svg?style=flat&logo=dotenv&logoColor=black) ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E.svg?style=flat&logo=JavaScript&logoColor=black) ![Passport](https://img.shields.io/badge/Passport-34E27A.svg?style=flat&logo=Passport&logoColor=white)  
-![React](https://img.shields.io/badge/React-61DAFB.svg?style=flat&logo=React&logoColor=black) ![Docker](https://img.shields.io/badge/Docker-2496ED.svg?style=flat&logo=Docker&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6.svg?style=flat&logo=TypeScript&logoColor=white) ![tsnode](https://img.shields.io/badge/tsnode-3178C6.svg?style=flat&logo=ts-node&logoColor=white) ![GitHub%20Actions](https://img.shields.io/badge/GitHub%20Actions-2088FF.svg?style=flat&logo=GitHub-Actions&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-646CFF.svg?style=flat&logo=Vite&logoColor=white) ![Snyk](https://img.shields.io/badge/Snyk-4C4A73.svg?style=flat&logo=Snyk&logoColor=white) ![ESLint](https://img.shields.io/badge/ESLint-4B32C3.svg?style=flat&logo=ESLint&logoColor=white) ![Axios](https://img.shields.io/badge/Axios-5A29E4.svg?style=flat&logo=Axios&logoColor=white) ![CSS](https://img.shields.io/badge/CSS-663399.svg?style=flat&logo=CSS&logoColor=white) ![datefns](https://img.shields.io/badge/datefns-770C56.svg?style=flat&logo=date-fns&logoColor=white) ![Jest](https://img.shields.io/badge/Jest-C21325.svg?style=flat&logo=Jest&logoColor=white)
+## Services
 
-  
+| Service | Purpose | Local Port |
+| --- | --- | --- |
+| frontend | React + Vite UI | 5173 |
+| api-gateway | HTTP entrypoint and auth-protected orchestration layer | 3000 |
+| user-service | Users, auth, and profile data | 3001 |
+| task-service | Task persistence and task lifecycle | 3002 |
+| recruitment-service | Recruitment and job-offer workflows | 3004 |
+| conversation-service | Collaboration conversations, messages, and AI proposals | 3006 |
+| mongo | Shared MongoDB instance | 27017 |
+| postgres | Shared PostgreSQL instance | 5432 |
 
-* * *
+## Collaboration Flow
 
-Table of Contents
------------------
+- Admin creates a collaboration conversation and describes the project.
+- The conversation service generates AI task proposals.
+- Participants receive the new conversation in realtime.
+- Messages are broadcast to the conversation room in realtime.
+- Admin can approve or reject proposals.
+- Approved proposals are converted into tasks and recipients receive a realtime task-assigned notification.
 
-*   [Overview](#overview)
-*   [Getting Started](#getting-started)
-    *   [Prerequisites](#prerequisites)
-    *   [Installation](#installation)
-    *   [Usage](#usage)
-    *   [Testing](#testing)
+## Prerequisites
 
-* * *
+- Docker and Docker Compose
+- Node.js 20+ for local non-containerized work
+- npm
 
-Overview
---------
+## Start The Project
 
-Elevate your productivity with **Task-Manager-with-Real-time-Notifications**, a comprehensive solution for managing tasks and user interactions in real-time.
+Run the full stack from the repository root:
 
-**Why Task-Manager-with-Real-time-Notifications?**
+```bash
+docker compose up -d --build
+```
 
-This project streamlines task management while enhancing user collaboration. The core features include:
+Recommended startup order is handled by Compose:
 
-*   🚀 **Real-time Notifications:** Keeps users updated on task changes and interactions, fostering collaboration.
-*   🛠️ **Microservices Architecture:** Promotes scalability and maintainability, allowing independent development and deployment.
-*   🔒 **Robust Authentication:** Utilizes JWT for secure user management, ensuring data protection and privacy.
-*   📋 **Comprehensive Task Management:** Facilitates creation, retrieval, updating, and deletion of tasks, streamlining workflows.
-*   ✅ **End-to-End Testing:** Ensures reliability and correctness of functionalities, enhancing overall code quality.
-*   🐳 **Containerization with Docker:** Simplifies deployment and maintains environment consistency across setups.
+1. Databases
+2. Backend services
+3. API gateway
+4. Frontend
 
-* * *
+## Open The App
 
-Getting Started
----------------
+- Frontend: http://localhost:5173
+- API gateway: http://localhost:3000
+- User service: http://localhost:3001
+- Task service: http://localhost:3002
+- Recruitment service: http://localhost:3004
+- Conversation service: http://localhost:3006
 
-### Prerequisites
+## Environment Variables
 
-This project requires the following dependencies:
+The compose file accepts these common values:
 
-*   **Programming Language:** TypeScript
-*   **Package Manager:** Npm
-*   **Container Runtime:** Docker
+- `JWT_SECRET`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `POSTGRES_DB`
+- `CONVERSATION_SERVICE_HOST`
+- `CONVERSATION_SERVICE_PORT`
 
-### Installation
+You can keep the defaults for local development unless you need to customize credentials or service routing.
 
-Build Task-Manager-with-Real-time-Notifications from the source and intsall dependencies:
+## Local Development
 
-1.  **Clone the repository:**
-    
-        ❯ git clone https://github.com/KabsiMontassar/Task-Manager-with-Real-time-Notifications
-        
-    
-2.  **Navigate to the project directory:**
-    
-        ❯ cd Task-Manager-with-Real-time-Notifications
-        
-    
-3.  **Install the dependencies:**
-    
+If you prefer to run pieces individually, start the backend services first, then the gateway, then the frontend.
 
-**Using [docker](https://www.docker.com/):**
+```bash
+# user-service
+cd user-service
+npm install
+npm run start:dev
 
-    ❯ docker build -t KabsiMontassar/Task-Manager-with-Real-time-Notifications .
-    
+# task-service
+cd task-service
+npm install
+npm run start:dev
 
-**Using [npm](https://www.npmjs.com/):**
+# recruitment-service
+cd recruitment-service
+npm install
+npm run start:dev
 
-    ❯ npm install
-    
+# conversation-service
+cd conversation-service
+npm install
+npm run start:dev
 
-### Usage
+# api-gateway
+cd api-gateway
+npm install
+npm run start:dev
 
-Run the project with:
+# frontend
+cd frontend
+npm install
+npm run dev
+```
 
-**Using [docker](https://www.docker.com/):**
+## Testing
 
-    docker run -it {image_name}
-    
+Run tests from each service directory:
 
-**Using [npm](https://www.npmjs.com/):**
+```bash
+npm run test
+npm run test:e2e
+```
 
-    npm start
-    
+Frontend checks can be run with:
 
-* * *
+```bash
+cd frontend
+npm run test
+```
 
-[⬆ Return](#top)
+## Collaboration Notes
 
-* * *
+- Admin-only actions include creating conversations, generating proposals, and approving or rejecting proposals.
+- Employees can join conversations, read messages, and receive task-assigned notifications in realtime.
+- The collaboration client uses a Socket.IO namespace at `/collaboration`.
+- If a non-admin user cannot load the user directory, the collaboration page still loads conversations and messages.
+
+## Troubleshooting
+
+- If the UI loads slowly or appears empty, confirm the backend services are up before refreshing the frontend.
+- If realtime updates do not appear, log out and log back in so the socket reconnects with a fresh token.
+- If Docker containers were already running before a code change, rebuild with `docker compose up -d --build`.
