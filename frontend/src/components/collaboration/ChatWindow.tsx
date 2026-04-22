@@ -96,10 +96,10 @@ const ChatWindow = ({
           {conversation && (
             <HStack spacing={2}>
               {conversation.participants?.slice(0, 3).map((participant) => {
-                const user = usersById[participant.userId];
+                const user = usersById[participant.userId] ?? participant.user;
                 return (
                   <Badge key={participant.userId} bg="whiteAlpha.200" color="white" borderRadius="full" px={3} py={1}>
-                    {user ? `${user.firstName} ${user.lastName}` : participant.role}
+                    {user ? `${user.firstName} ${user.lastName}` : participant.fullName ?? participant.role}
                   </Badge>
                 );
               })}
@@ -117,7 +117,7 @@ const ChatWindow = ({
               </Box>
             ) : (
               messages.map((message) => {
-                const sender = usersById[message.senderId];
+                const sender = usersById[message.senderId] ?? message.sender;
                 const senderLabel =
                   message.senderType === 'AI'
                     ? 'AI'
@@ -125,7 +125,7 @@ const ChatWindow = ({
                       ? 'System'
                       : sender
                         ? `${sender.firstName} ${sender.lastName}`
-                        : message.senderId;
+                        : message.sender?.fullName ?? message.senderId;
 
                 const isOwnMessage = message.senderId === currentUser?.id;
 
@@ -186,8 +186,8 @@ const ChatWindow = ({
 
                 <Stack spacing={3}>
                   {proposals.map((proposal) => {
-                    const assignee = usersById[proposal.assignedTo];
-                    const assigneeLabel = assignee ? `${assignee.firstName} ${assignee.lastName}` : proposal.assignedTo;
+                    const assignee = usersById[proposal.assignedTo] ?? proposal.assignee;
+                    const assigneeLabel = assignee ? `${assignee.firstName} ${assignee.lastName}` : proposal.assignee?.fullName ?? proposal.assignedTo;
 
                     return (
                       <TaskProposalCard

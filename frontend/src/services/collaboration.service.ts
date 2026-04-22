@@ -11,6 +11,17 @@ export interface ConversationParticipant {
   canApproveTasks?: boolean;
   canSendMessages?: boolean;
   joinedAt?: string;
+  fullName?: string;
+  user?: CollaborationUserSummary;
+}
+
+export interface CollaborationUserSummary {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+  role: string;
+  fullName: string;
 }
 
 export interface CollaborationConversation {
@@ -20,6 +31,8 @@ export interface CollaborationConversation {
   adminId: string;
   memberIds: string[];
   participants?: ConversationParticipant[];
+  admin?: CollaborationUserSummary;
+  members?: CollaborationUserSummary[];
   status?: string;
   lastMessageAt?: string;
   lastMessage?: string;
@@ -34,6 +47,7 @@ export interface CollaborationMessage {
   senderType: 'USER' | 'AI' | 'SYSTEM';
   content: string;
   timestamp?: string;
+  sender?: CollaborationUserSummary;
 }
 
 export interface CollaborationTaskProposal {
@@ -46,6 +60,7 @@ export interface CollaborationTaskProposal {
   priority: 'LOW' | 'MEDIUM' | 'HIGH';
   status?: 'DRAFT' | 'APPROVED' | 'REJECTED';
   createdTaskId?: string;
+  assignee?: CollaborationUserSummary;
 }
 
 export interface CreateConversationPayload {

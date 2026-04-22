@@ -25,6 +25,15 @@ type UserProfile = {
   email?: string;
 };
 
+type UserSummary = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+  role: string;
+  fullName: string;
+};
+
 @Injectable()
 export class CollaborationService {
   constructor(
@@ -105,19 +114,25 @@ export class CollaborationService {
     });
 
     return {
-      conversation,
-      proposals,
+      conversation: await this.enrichConversation(conversation.toObject()),
+      proposals: await this.enrichProposals(proposals.map((proposal) => proposal.toObject())),
       tasks: aiResult.tasks,
     };
   }
 
   async getConversationsForUser(userId: string) {
-    return this.conversationModel.find({ $or: [{ adminId: userId }, { memberIds: userId }] }).sort({ updatedAt: -1 }).lean();
+    const conversations = await this.conversationModel
+      .find({ $or: [{ adminId: userId }, { memberIds: userId }] })
+      .sort({ updatedAt: -1 })
+      .lean();
+
+    return Promise.all(conversations.map((conversation) => this.enrichConversation(conversation)));
   }
 
   async getMessages(conversationId: string) {
     await this.ensureConversationExists(conversationId);
-    return this.messageModel.find({ conversationId }).sort({ timestamp: 1 }).lean();
+    const messages = await this.messageModel.find({ conversationId }).sort({ timestamp: 1 }).lean();
+    return this.enrichMessages(messages);
   }
 
   async sendMessage(conversationId: string, input: SendMessageDto) {
@@ -132,7 +147,7 @@ export class CollaborationService {
     });
 
     await this.conversationModel.updateOne({ _id: conversationId }, { $set: { lastMessageAt: new Date() } });
-    return message;
+    return this.enrichMessage(message.toObject());
   }
 
   async runAiDecomposition(conversationId: string, adminId: string) {
@@ -164,7 +179,10 @@ export class CollaborationService {
       })),
     );
 
-    return { tasks: tasks.tasks, proposals };
+    return {
+      tasks: tasks.tasks,
+      proposals: await this.enrichProposals(proposals.map((proposal) => proposal.toObject())),
+    };
   }
 
   async approveProposal(proposalId: string, adminId: string) {
@@ -208,7 +226,7 @@ export class CollaborationService {
     proposal.createdTaskId = createdTask?.id;
     await proposal.save();
 
-    return proposal;
+    return this.enrichProposal(proposal.toObject());
   }
 
   async rejectProposal(proposalId: string, adminId: string) {
@@ -221,7 +239,7 @@ export class CollaborationService {
 
     proposal.status = 'REJECTED';
     await proposal.save();
-    return proposal;
+    return this.enrichProposal(proposal.toObject());
   }
 
   private async ensureConversationExists(conversationId: string) {
@@ -279,6 +297,71 @@ export class CollaborationService {
 
   private resolveUserId(user: UserProfile): string {
     return user.id ?? user._id ?? '';
+  }
+
+  private fullName(user: UserProfile): string {
+    return `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim();
+  }
+
+  private toUserSummary(user: UserProfile): UserSummary {
+    return {
+      id: this.resolveUserId(user),
+      firstName: user.firstName ?? '',
+      lastName: user.lastName ?? '',
+      email: user.email,
+      role: this.resolveRole(user),
+      fullName: this.fullName(user) || user.email || this.resolveUserId(user),
+    };
+  }
+
+  private async fetchUsersByIds(userIds: string[]) {
+    const uniqueIds = Array.from(new Set(userIds.filter(Boolean)));
+    const entries = await Promise.all(
+      uniqueIds.map(async (userId) => [userId, this.toUserSummary(await this.fetchUser(userId))] as const),
+    );
+
+    return new Map(entries);
+  }
+
+  private async enrichConversation<T extends { adminId: string; memberIds: string[]; participants?: Array<{ userId: string }> }>(conversation: T) {
+    const userMap = await this.fetchUsersByIds([conversation.adminId, ...(conversation.memberIds ?? [])]);
+
+    return {
+      ...conversation,
+      admin: userMap.get(conversation.adminId),
+      members: (conversation.memberIds ?? []).map((memberId) => userMap.get(memberId)).filter(Boolean),
+      participants: (conversation.participants ?? []).map((participant) => ({
+        ...participant,
+        user: userMap.get(participant.userId),
+        fullName: userMap.get(participant.userId)?.fullName ?? participant.userId,
+      })),
+    };
+  }
+
+  private async enrichMessages<T extends { senderId: string }>(messages: T[]) {
+    const userMap = await this.fetchUsersByIds(messages.map((message) => message.senderId));
+    return messages.map((message) => ({
+      ...message,
+      sender: userMap.get(message.senderId),
+    }));
+  }
+
+  private async enrichMessage<T extends { senderId: string }>(message: T) {
+    const [enriched] = await this.enrichMessages([message]);
+    return enriched;
+  }
+
+  private async enrichProposals<T extends { assignedTo: string }>(proposals: T[]) {
+    const userMap = await this.fetchUsersByIds(proposals.map((proposal) => proposal.assignedTo));
+    return proposals.map((proposal) => ({
+      ...proposal,
+      assignee: userMap.get(proposal.assignedTo),
+    }));
+  }
+
+  private async enrichProposal<T extends { assignedTo: string }>(proposal: T) {
+    const [enriched] = await this.enrichProposals([proposal]);
+    return enriched;
   }
 
   private resolveRole(user: UserProfile): string {

@@ -289,9 +289,36 @@ const CollaborationPage = () => {
   }, [selectedConversationId]);
 
   const usersById = useMemo(() => {
-    const combinedUsers = currentUser ? [...users, currentUser] : users;
-    return Object.fromEntries(combinedUsers.map((user) => [user.id, user]));
-  }, [currentUser, users]);
+    const entries = new Map<string, User>();
+    const register = (user?: Partial<User> & { id?: string }) => {
+      if (!user?.id) {
+        return;
+      }
+
+      entries.set(user.id, {
+        id: user.id,
+        email: user.email ?? '',
+        firstName: user.firstName ?? '',
+        lastName: user.lastName ?? '',
+        role: (user.role ?? UserRole.EMPLOYEE) as UserRole,
+        isActive: user.isActive ?? true,
+        createdAt: user.createdAt ?? '',
+        updatedAt: user.updatedAt ?? '',
+      });
+    };
+
+    users.forEach(register);
+    register(currentUser ?? undefined);
+    conversations.forEach((conversation) => {
+      register(conversation.admin);
+      conversation.members?.forEach(register);
+      conversation.participants?.forEach((participant) => register(participant.user));
+    });
+    messages.forEach((message) => register(message.sender));
+    proposals.forEach((proposal) => register(proposal.assignee));
+
+    return Object.fromEntries(entries.entries());
+  }, [conversations, currentUser, messages, proposals, users]);
 
   const selectedConversation = useMemo(
     () => conversations.find((conversation) => toConversationId(conversation) === selectedConversationId) ?? null,
