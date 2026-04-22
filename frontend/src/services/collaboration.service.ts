@@ -37,6 +37,8 @@ export interface CollaborationConversation {
   lastMessageAt?: string;
   lastMessage?: string;
   unreadCount?: number;
+  pendingProposalCount?: number;
+  pendingAssignedProposalCount?: number;
 }
 
 export interface CollaborationMessage {
@@ -48,6 +50,13 @@ export interface CollaborationMessage {
   content: string;
   timestamp?: string;
   sender?: CollaborationUserSummary;
+  messageType?: 'TEXT' | 'TASK_ASSIGNED';
+  metadata?: {
+    taskId?: string;
+    taskTitle?: string;
+    assigneeId?: string;
+    assigneeName?: string;
+  };
 }
 
 export interface CollaborationTaskProposal {
@@ -88,6 +97,11 @@ export interface AiDecomposeResponse {
     priority: 'LOW' | 'MEDIUM' | 'HIGH';
   }>;
   proposals: CollaborationTaskProposal[];
+}
+
+export interface ApproveProposalResponse {
+  proposal: CollaborationTaskProposal;
+  systemMessage?: CollaborationMessage;
 }
 
 class CollaborationService {
@@ -235,9 +249,9 @@ class CollaborationService {
     }
   }
 
-  async approveProposal(proposalId: string, conversationId: string): Promise<CollaborationTaskProposal> {
+  async approveProposal(proposalId: string, conversationId: string): Promise<ApproveProposalResponse> {
     try {
-      const response = await api.post<CollaborationTaskProposal>(
+      const response = await api.post<ApproveProposalResponse>(
         API_ENDPOINTS.COLLABORATION.APPROVE_PROPOSAL(proposalId),
         {
           adminId: this.currentUserId(),
@@ -273,7 +287,7 @@ class CollaborationService {
 
       try {
         const response = await this.approveProposal(proposalId, conversationId);
-        approved.push(response);
+        approved.push(response.proposal);
       } catch (error) {
         if (axios.isAxiosError(error)) {
           throw new Error(`Failed to approve proposal ${proposal.title}: ${error.message}`);

@@ -9,6 +9,7 @@ import {
   IconButton,
   Spinner,
   Stack,
+  Switch,
   Text,
   useDisclosure,
   useToast,
@@ -39,6 +40,22 @@ const toMessageId = (message: CollaborationMessage) => message.id ?? message._id
 
 const toProposalId = (proposal: CollaborationTaskProposal) => proposal.id ?? proposal._id ?? `${proposal.conversationId}-${proposal.title}-${proposal.assignedTo}`;
 
+type ConversationPreferences = {
+  pinned: string[];
+  muted: string[];
+  archived: string[];
+  deleted: string[];
+};
+
+const emptyPreferences = (): ConversationPreferences => ({
+  pinned: [],
+  muted: [],
+  archived: [],
+  deleted: [],
+});
+
+const preferenceKey = (userId?: string) => `collaboration:preferences:${userId ?? 'anonymous'}`;
+
 const CollaborationPage = () => {
   const navigate = useNavigate();
   const toast = useToast();
@@ -54,11 +71,27 @@ const CollaborationPage = () => {
   const [isAiThinking, setIsAiThinking] = useState(false);
   const [isModalSubmitting, setIsModalSubmitting] = useState(false);
   const [typingLabel, setTypingLabel] = useState('');
+  const [conversationPreferences, setConversationPreferences] = useState<ConversationPreferences>(emptyPreferences);
+  const [showArchivedConversations, setShowArchivedConversations] = useState(false);
   const selectedConversationIdRef = useRef('');
   const currentUserIdRef = useRef('');
+  const usersByIdRef = useRef<Record<string, User>>({});
 
   const currentUser = authService.getCurrentUser();
   const isAdmin = currentUser?.role?.toLowerCase() === UserRole.ADMIN;
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(preferenceKey(currentUser?.id));
+      setConversationPreferences(stored ? JSON.parse(stored) as ConversationPreferences : emptyPreferences());
+    } catch {
+      setConversationPreferences(emptyPreferences());
+    }
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    localStorage.setItem(preferenceKey(currentUser?.id), JSON.stringify(conversationPreferences));
+  }, [conversationPreferences, currentUser?.id]);
 
   useEffect(() => {
     selectedConversationIdRef.current = selectedConversationId;
@@ -67,6 +100,23 @@ const CollaborationPage = () => {
   useEffect(() => {
     currentUserIdRef.current = currentUser?.id ?? '';
   }, [currentUser?.id]);
+
+  const updateConversationPreference = (
+    key: keyof ConversationPreferences,
+    conversationId: string,
+    enabled?: boolean,
+  ) => {
+    setConversationPreferences((prev) => {
+      const exists = prev[key].includes(conversationId);
+      const shouldEnable = enabled ?? !exists;
+      return {
+        ...prev,
+        [key]: shouldEnable
+          ? Array.from(new Set([...prev[key], conversationId]))
+          : prev[key].filter((item) => item !== conversationId),
+      };
+    });
+  };
 
   useEffect(() => {
     const socket = collaborationSocket.connect();
@@ -124,6 +174,7 @@ const CollaborationPage = () => {
 
       setIsAiThinking(false);
       setTypingLabel('');
+      void refreshConversationList(selectedConversationIdRef.current);
       setMessages((prev) => {
         const aiMessage: CollaborationMessage = {
           conversationId: aiResponse.conversationId,
@@ -152,6 +203,7 @@ const CollaborationPage = () => {
           isClosable: true,
         });
       }
+      void refreshConversationList(selectedConversationIdRef.current);
     });
 
     const removeConversationNew = collaborationSocket.onConversationNew((payload) => {
@@ -173,7 +225,9 @@ const CollaborationPage = () => {
 
     const removeTypingStart = collaborationSocket.onTypingStart((payload) => {
       if (payload.conversationId === selectedConversationIdRef.current && payload.userId !== currentUserIdRef.current) {
-        setTypingLabel('AI is thinking...');
+        const user = usersByIdRef.current[payload.userId];
+        const name = user ? `${user.firstName} ${user.lastName}`.trim() : 'User';
+        setTypingLabel(`${name} is typing...`);
       }
     });
 
@@ -320,9 +374,44 @@ const CollaborationPage = () => {
     return Object.fromEntries(entries.entries());
   }, [conversations, currentUser, messages, proposals, users]);
 
+  useEffect(() => {
+    usersByIdRef.current = usersById;
+  }, [usersById]);
+
   const selectedConversation = useMemo(
     () => conversations.find((conversation) => toConversationId(conversation) === selectedConversationId) ?? null,
     [conversations, selectedConversationId],
+  );
+
+  const visibleConversations = useMemo(() => {
+    const deleted = new Set(conversationPreferences.deleted);
+    const archived = new Set(conversationPreferences.archived);
+    const pinned = new Set(conversationPreferences.pinned);
+
+    return conversations
+      .filter((conversation) => !deleted.has(toConversationId(conversation)))
+      .filter((conversation) => showArchivedConversations || !archived.has(toConversationId(conversation)))
+      .sort((left, right) => {
+        const leftId = toConversationId(left);
+        const rightId = toConversationId(right);
+        const leftPinned = pinned.has(leftId) ? 1 : 0;
+        const rightPinned = pinned.has(rightId) ? 1 : 0;
+        if (leftPinned !== rightPinned) {
+          return rightPinned - leftPinned;
+        }
+
+        return new Date(right.lastMessageAt ?? 0).getTime() - new Date(left.lastMessageAt ?? 0).getTime();
+      });
+  }, [conversationPreferences.archived, conversationPreferences.deleted, conversationPreferences.pinned, conversations, showArchivedConversations]);
+
+  const archivedConversationCount = useMemo(
+    () => conversations.filter((conversation) => conversationPreferences.archived.includes(toConversationId(conversation))).length,
+    [conversationPreferences.archived, conversations],
+  );
+
+  const employeePendingProposalCount = useMemo(
+    () => conversations.reduce((total, conversation) => total + (conversation.pendingAssignedProposalCount ?? 0), 0),
+    [conversations],
   );
 
   const handleLogout = () => {
@@ -355,6 +444,32 @@ const CollaborationPage = () => {
         collaborationSocket.joinConversation(id);
       }
     });
+  };
+
+  const handleConversationAction = (
+    action: 'pin' | 'mute' | 'archive' | 'delete',
+    conversation: CollaborationConversation,
+  ) => {
+    const conversationId = toConversationId(conversation);
+    if (!conversationId) {
+      return;
+    }
+
+    const key =
+      action === 'pin'
+        ? 'pinned'
+        : action === 'mute'
+          ? 'muted'
+          : action === 'archive'
+            ? 'archived'
+            : 'deleted';
+    updateConversationPreference(key, conversationId);
+
+    if ((action === 'archive' || action === 'delete') && selectedConversationId === conversationId) {
+      setSelectedConversationId('');
+      setMessages([]);
+      setProposals([]);
+    }
   };
 
   const handleSelectConversation = async (conversation: CollaborationConversation) => {
@@ -411,10 +526,11 @@ const CollaborationPage = () => {
         ...prev.filter((conversation) => toConversationId(conversation) !== conversationId),
       ]);
 
-      setSelectedConversationId(conversationId);
-      const freshMessages = await collaborationService.getMessages(conversationId);
-      setMessages(freshMessages);
-      setProposals(response.proposals ?? collaborationService.getCachedProposals(conversationId));
+        setSelectedConversationId(conversationId);
+        const freshMessages = await collaborationService.getMessages(conversationId);
+        setMessages(freshMessages);
+        setProposals(response.proposals ?? collaborationService.getCachedProposals(conversationId));
+        await refreshConversationList(conversationId);
 
       collaborationSocket.joinConversation(conversationId);
       localStorage.setItem(seenKey(conversationId), new Date().toISOString());
@@ -447,11 +563,12 @@ const CollaborationPage = () => {
       return;
     }
 
-    try {
-      setIsAiThinking(true);
-      const response = await collaborationService.aiDecompose(selectedConversationId);
-      setProposals(response.proposals);
-      toast({
+      try {
+        setIsAiThinking(true);
+        const response = await collaborationService.aiDecompose(selectedConversationId);
+        setProposals(response.proposals);
+        await refreshConversationList(selectedConversationId);
+        toast({
         title: 'AI tasks updated',
         status: 'success',
         duration: 2500,
@@ -475,12 +592,13 @@ const CollaborationPage = () => {
       return;
     }
 
-    try {
-      setIsAiThinking(true);
-      const approved = await collaborationService.approveTasks(selectedConversationId);
-      if (approved.length > 0) {
-        setProposals([]);
-        toast({
+      try {
+        setIsAiThinking(true);
+        const approved = await collaborationService.approveTasks(selectedConversationId);
+        if (approved.length > 0) {
+          setProposals([]);
+          await refreshConversationList(selectedConversationId);
+          toast({
           title: 'Tasks assigned successfully',
           status: 'success',
           duration: 3000,
@@ -507,10 +625,18 @@ const CollaborationPage = () => {
 
     try {
       const proposalId = toProposalId(proposal);
-      await collaborationService.approveProposal(proposalId, selectedConversationId);
+      const response = await collaborationService.approveProposal(proposalId, selectedConversationId);
       if (proposalId) {
         setProposals((prev) => prev.filter((item) => toProposalId(item) !== proposalId));
       }
+      if (response.systemMessage) {
+        setMessages((prev) =>
+          prev.some((item) => toMessageId(item) === toMessageId(response.systemMessage!))
+            ? prev
+            : [...prev, response.systemMessage!],
+        );
+      }
+      await refreshConversationList(selectedConversationId);
 
       toast({
         title: 'Task assigned successfully',
@@ -538,6 +664,7 @@ const CollaborationPage = () => {
       const proposalId = toProposalId(proposal);
       await collaborationService.rejectProposal(proposalId, selectedConversationId);
       setProposals((prev) => prev.filter((item) => toProposalId(item) !== proposalId));
+      await refreshConversationList(selectedConversationId);
       toast({
         title: 'Proposal rejected',
         status: 'info',
@@ -553,6 +680,22 @@ const CollaborationPage = () => {
         isClosable: true,
       });
     }
+  };
+
+  const handleStartTyping = () => {
+    if (!selectedConversationId || !currentUser?.id) {
+      return;
+    }
+
+    collaborationSocket.startTyping(selectedConversationId, currentUser.id);
+  };
+
+  const handleStopTyping = () => {
+    if (!selectedConversationId || !currentUser?.id) {
+      return;
+    }
+
+    collaborationSocket.stopTyping(selectedConversationId, currentUser.id);
   };
 
   return (
@@ -572,6 +715,32 @@ const CollaborationPage = () => {
           </Text>
         </Stack>
 
+        {!isAdmin && employeePendingProposalCount > 0 && (
+          <Flex
+            position="sticky"
+            top={4}
+            zIndex={5}
+            mb={4}
+            borderRadius="2xl"
+            px={5}
+            py={3}
+            bg="linear-gradient(135deg, rgba(15,118,110,0.95), rgba(14,165,233,0.9))"
+            color="white"
+            boxShadow="0 16px 30px rgba(15, 118, 110, 0.2)"
+            justify="space-between"
+            align="center"
+            gap={3}
+            wrap="wrap"
+          >
+            <Text fontWeight="700">
+              You have {employeePendingProposalCount} pending task proposals to review
+            </Text>
+            <Badge bg="whiteAlpha.300" color="white" borderRadius="full" px={3} py={1}>
+              Live count
+            </Badge>
+          </Flex>
+        )}
+
         <Flex gap={6} align="stretch" h="calc(100vh - 170px)">
           <Box w={{ base: '100%', xl: '340px' }} flexShrink={0} display={{ base: selectedConversation ? 'none' : 'block', xl: 'block' }}>
             <Box bg="rgba(255,255,255,0.88)" backdropFilter="blur(16px)" borderRadius="3xl" boxShadow="0 18px 45px rgba(15, 23, 42, 0.08)" p={5} h="100%" overflow="hidden">
@@ -581,14 +750,23 @@ const CollaborationPage = () => {
                     Conversations
                   </Text>
                   <Text fontSize="sm" color="gray.500">
-                    {conversations.length} active threads
+                    {visibleConversations.length} visible threads
                   </Text>
                 </Box>
-                {isAdmin && (
-                  <Button size="sm" colorScheme="purple" onClick={createModal.onOpen} leftIcon={<AddIcon />}>
-                    New
-                  </Button>
-                )}
+                <Flex align="center" gap={2}>
+                  <Flex align="center" gap={2}>
+                    <Text fontSize="xs" color="gray.500">Show archived</Text>
+                    <Switch size="sm" isChecked={showArchivedConversations} onChange={(event) => setShowArchivedConversations(event.target.checked)} />
+                  </Flex>
+                  {archivedConversationCount > 0 && (
+                    <Badge colorScheme="orange" borderRadius="full">{archivedConversationCount}</Badge>
+                  )}
+                  {isAdmin && (
+                    <Button size="sm" colorScheme="purple" onClick={createModal.onOpen} leftIcon={<AddIcon />}>
+                      New
+                    </Button>
+                  )}
+                </Flex>
               </Flex>
 
               {loading ? (
@@ -597,9 +775,11 @@ const CollaborationPage = () => {
                 </Flex>
               ) : (
                 <ConversationList
-                  conversations={conversations}
+                  conversations={visibleConversations}
+                  preferences={conversationPreferences}
                   selectedConversationId={selectedConversationId}
                   onSelectConversation={handleSelectConversation}
+                  onAction={handleConversationAction}
                 />
               )}
             </Box>
@@ -625,6 +805,8 @@ const CollaborationPage = () => {
                 isAiThinking={isAiThinking}
                 typingLabel={typingLabel}
                 onSendMessage={handleSendMessage}
+                onStartTyping={handleStartTyping}
+                onStopTyping={handleStopTyping}
                 onApproveAll={handleApproveAll}
                 onApproveProposal={handleApproveProposal}
                 onRejectProposal={handleRejectProposal}

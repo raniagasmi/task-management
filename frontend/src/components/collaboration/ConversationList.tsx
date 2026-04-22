@@ -1,10 +1,19 @@
-import { Badge, Box, Flex, Stack, Text } from '@chakra-ui/react';
+import { Badge, Box, Flex, IconButton, Menu, MenuButton, MenuItem, MenuList, Stack, Text } from '@chakra-ui/react';
+import { HamburgerIcon } from '@chakra-ui/icons';
 import { CollaborationConversation } from '../../services/collaboration.service';
+type ConversationPreferences = {
+  pinned: string[];
+  muted: string[];
+  archived: string[];
+  deleted: string[];
+};
 
 interface ConversationListProps {
   conversations: CollaborationConversation[];
+  preferences: ConversationPreferences;
   selectedConversationId: string;
   onSelectConversation: (conversation: CollaborationConversation) => void;
+  onAction: (action: 'pin' | 'mute' | 'archive' | 'delete', conversation: CollaborationConversation) => void;
 }
 
 const formatPreview = (value?: string) => {
@@ -17,8 +26,10 @@ const formatPreview = (value?: string) => {
 
 const ConversationList = ({
   conversations,
+  preferences,
   selectedConversationId,
   onSelectConversation,
+  onAction,
 }: ConversationListProps) => {
   return (
     <Stack spacing={3}>
@@ -35,6 +46,8 @@ const ConversationList = ({
         conversations.map((conversation) => {
           const conversationId = conversation.id ?? conversation._id ?? '';
           const isSelected = conversationId === selectedConversationId;
+          const isPinned = preferences.pinned.includes(conversationId);
+          const isMuted = preferences.muted.includes(conversationId);
 
           return (
             <Box
@@ -52,19 +65,49 @@ const ConversationList = ({
             >
               <Flex justify="space-between" align="flex-start" gap={3}>
                 <Box>
-                  <Text fontWeight="700" color="#0f172a" noOfLines={1}>
-                    {conversation.title}
-                  </Text>
+                  <Flex align="center" gap={2}>
+                    {isPinned && <Badge colorScheme="purple">Pinned</Badge>}
+                    {isMuted && <Badge colorScheme="gray">Muted</Badge>}
+                    <Text fontWeight="700" color="#0f172a" noOfLines={1}>
+                      {conversation.title}
+                    </Text>
+                  </Flex>
                   <Text color="slate.500" fontSize="sm" mt={1} noOfLines={2}>
                     {formatPreview(conversation.lastMessage)}
                   </Text>
                 </Box>
 
-                {(conversation.unreadCount ?? 0) > 0 && (
-                  <Badge colorScheme="pink" borderRadius="full" px={2}>
-                    {conversation.unreadCount}
-                  </Badge>
-                )}
+                <Flex align="center" gap={2}>
+                  {(conversation.unreadCount ?? 0) > 0 && (
+                    <Badge colorScheme="pink" borderRadius="full" px={2}>
+                      {conversation.unreadCount}
+                    </Badge>
+                  )}
+                  <Menu>
+                    <MenuButton
+                      as={IconButton}
+                      aria-label="Conversation actions"
+                      icon={<HamburgerIcon />}
+                      size="xs"
+                      variant="ghost"
+                      onClick={(event) => event.stopPropagation()}
+                    />
+                    <MenuList onClick={(event) => event.stopPropagation()}>
+                      <MenuItem onClick={() => onAction('pin', conversation)}>
+                        {isPinned ? 'Unpin conversation' : 'Pin conversation'}
+                      </MenuItem>
+                      <MenuItem onClick={() => onAction('mute', conversation)}>
+                        {isMuted ? 'Unmute conversation' : 'Mute conversation'}
+                      </MenuItem>
+                      <MenuItem onClick={() => onAction('archive', conversation)}>
+                        Archive conversation
+                      </MenuItem>
+                      <MenuItem color="red.500" onClick={() => onAction('delete', conversation)}>
+                        Delete conversation
+                      </MenuItem>
+                    </MenuList>
+                  </Menu>
+                </Flex>
               </Flex>
             </Box>
           );

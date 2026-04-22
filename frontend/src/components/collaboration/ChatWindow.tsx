@@ -30,6 +30,8 @@ interface ChatWindowProps {
   isAiThinking: boolean;
   typingLabel?: string;
   onSendMessage: (content: string) => void;
+  onStartTyping: () => void;
+  onStopTyping: () => void;
   onApproveAll: () => void;
   onApproveProposal: (proposal: CollaborationTaskProposal) => void;
   onRejectProposal: (proposal: CollaborationTaskProposal) => void;
@@ -47,6 +49,8 @@ const ChatWindow = ({
   isAiThinking,
   typingLabel,
   onSendMessage,
+  onStartTyping,
+  onStopTyping,
   onApproveAll,
   onApproveProposal,
   onRejectProposal,
@@ -54,10 +58,18 @@ const ChatWindow = ({
 }: ChatWindowProps) => {
   const [draft, setDraft] = useState('');
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const typingTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, proposals, isAiThinking, typingLabel]);
+
+  useEffect(() => () => {
+    if (typingTimeoutRef.current) {
+      window.clearTimeout(typingTimeoutRef.current);
+    }
+    onStopTyping();
+  }, [onStopTyping]);
 
   const roomLabel = useMemo(() => {
     if (!conversation) {
@@ -74,6 +86,7 @@ const ChatWindow = ({
     }
 
     onSendMessage(content);
+    onStopTyping();
     setDraft('');
   };
 
@@ -137,7 +150,7 @@ const ChatWindow = ({
               })
             )}
 
-            {(isAiThinking || typingLabel) && (
+            {isAiThinking && (
               <Box
                 alignSelf="flex-start"
                 bg="white"
@@ -150,7 +163,25 @@ const ChatWindow = ({
               >
                 <HStack spacing={2}>
                   <Spinner size="sm" color="purple.500" />
-                  <Text color="gray.600">{typingLabel ?? 'AI is thinking...'}</Text>
+                  <Text color="gray.600">AI is generating proposals...</Text>
+                </HStack>
+              </Box>
+            )}
+
+            {typingLabel && (
+              <Box
+                alignSelf="flex-start"
+                bg="white"
+                borderWidth="1px"
+                borderColor="teal.100"
+                borderRadius="full"
+                px={4}
+                py={2}
+                boxShadow="sm"
+              >
+                <HStack spacing={2}>
+                  <Spinner size="sm" color="teal.500" />
+                  <Text color="gray.600">{typingLabel}</Text>
                 </HStack>
               </Box>
             )}
@@ -212,7 +243,21 @@ const ChatWindow = ({
           <Stack direction={{ base: 'column', md: 'row' }} spacing={3}>
             <Input
               value={draft}
-              onChange={(event) => setDraft(event.target.value)}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                if (event.target.value.trim()) {
+                  onStartTyping();
+                  if (typingTimeoutRef.current) {
+                    window.clearTimeout(typingTimeoutRef.current);
+                  }
+                  typingTimeoutRef.current = window.setTimeout(() => {
+                    onStopTyping();
+                    typingTimeoutRef.current = null;
+                  }, 1200);
+                } else {
+                  onStopTyping();
+                }
+              }}
               placeholder="Write a message..."
               onKeyDown={(event) => {
                 if (event.key === 'Enter' && !event.shiftKey) {

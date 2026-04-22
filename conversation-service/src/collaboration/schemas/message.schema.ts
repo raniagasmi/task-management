@@ -17,6 +17,17 @@ export class Message {
   @Prop({ required: true })
   content!: string;
 
+  @Prop({ required: false, enum: ['TEXT', 'TASK_ASSIGNED'], default: 'TEXT' })
+  messageType?: 'TEXT' | 'TASK_ASSIGNED';
+
+  @Prop({ type: Object, required: false })
+  metadata?: {
+    taskId?: string;
+    taskTitle?: string;
+    assigneeId?: string;
+    assigneeName?: string;
+  };
+
   @Prop({ default: Date.now })
   timestamp!: Date;
 }

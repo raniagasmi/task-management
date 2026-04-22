@@ -71,13 +71,23 @@ export class CollaborationController {
   @UseGuards(RolesGuard)
   @Roles('admin')
   async approve(@Param('id') id: string, @Req() req: { user: { userId?: string } }) {
-    const proposal = await this.collaborationService.approveProposal(id, {
+    const response = await this.collaborationService.approveProposal(id, {
       adminId: req.user?.userId ?? '',
     }) as CollaborationProposalResponse;
+    const proposal = response.proposal;
+    if (!proposal) {
+      return response;
+    }
     this.collaborationGateway.emitProposalApproved({ conversationId: proposal.conversationId, proposal });
     this.collaborationGateway.emitTaskCreated({ conversationId: proposal.conversationId, proposal });
     this.collaborationGateway.emitTaskAssignedNotification({ assignedTo: proposal.assignedTo, proposal });
-    return proposal;
+    if (response.systemMessage) {
+      this.collaborationGateway.emitMessageNew({
+        conversationId: proposal.conversationId,
+        message: response.systemMessage,
+      });
+    }
+    return response;
   }
 
   @Post('proposals/:id/reject')
@@ -87,7 +97,11 @@ export class CollaborationController {
     const proposal = await this.collaborationService.rejectProposal(id, {
       adminId: req.user?.userId ?? '',
     }) as CollaborationProposalResponse;
-    this.collaborationGateway.emitProposalUpdates({ conversationId: proposal.conversationId, proposal });
+    const conversationId = proposal.proposal?.conversationId ?? proposal.conversationId;
+    if (!conversationId) {
+      return proposal;
+    }
+    this.collaborationGateway.emitProposalUpdates({ conversationId, proposal });
     return proposal;
   }
 }

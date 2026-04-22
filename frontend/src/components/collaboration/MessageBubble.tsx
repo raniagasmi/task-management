@@ -1,4 +1,5 @@
 import { Avatar, Box, Flex, Text } from '@chakra-ui/react';
+import { Link as RouterLink } from 'react-router-dom';
 import { CollaborationMessage } from '../../services/collaboration.service';
 
 interface MessageBubbleProps {
@@ -9,6 +10,30 @@ interface MessageBubbleProps {
 
 const MessageBubble = ({ message, isOwnMessage, senderLabel }: MessageBubbleProps) => {
   if (message.senderType === 'SYSTEM') {
+    if (message.messageType === 'TASK_ASSIGNED') {
+      return (
+        <Flex justify="center" w="100%" py={1}>
+          <Box maxW="80%">
+            <div className="chakra-stack css-1uodvt1">
+              <span className="chakra-badge css-1kfwou3">
+                {'\u2705'} Task{' '}
+                <Text
+                  as={RouterLink}
+                  to={message.metadata?.taskId ? `/?taskId=${message.metadata.taskId}` : '/'}
+                  color="teal.600"
+                  textDecoration="underline"
+                  fontWeight="700"
+                >
+                  “{message.metadata?.taskTitle ?? 'Untitled task'}”
+                </Text>{' '}
+                assigned to @{message.metadata?.assigneeName ?? 'Unknown user'}
+              </span>
+            </div>
+          </Box>
+        </Flex>
+      );
+    }
+
     return (
       <Flex justify="center" w="100%" py={1}>
         <Box

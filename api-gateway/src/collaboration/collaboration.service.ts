@@ -27,13 +27,25 @@ export interface ConversationCreatedResponse {
 }
 
 export interface CollaborationProposalResponse {
-  conversationId: string;
-  assignedTo: string;
-  title: string;
-  description: string;
-  priority: 'LOW' | 'MEDIUM' | 'HIGH';
-  status: 'DRAFT' | 'APPROVED' | 'REJECTED';
+  conversationId?: string;
+  assignedTo?: string;
+  title?: string;
+  description?: string;
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH';
+  status?: 'DRAFT' | 'APPROVED' | 'REJECTED';
   createdTaskId?: string;
+  proposal?: {
+    conversationId: string;
+    assignedTo: string;
+    title: string;
+    description: string;
+    priority: 'LOW' | 'MEDIUM' | 'HIGH';
+    status: 'DRAFT' | 'APPROVED' | 'REJECTED';
+    createdTaskId?: string;
+  };
+  systemMessage?: {
+    conversationId: string;
+  };
 }
 
 @Injectable()

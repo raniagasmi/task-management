@@ -34,6 +34,13 @@ type UserSummary = {
   fullName: string;
 };
 
+type StructuredSystemMessage = {
+  taskId?: string;
+  taskTitle?: string;
+  assigneeId?: string;
+  assigneeName?: string;
+};
+
 @Injectable()
 export class CollaborationService {
   constructor(
@@ -126,7 +133,7 @@ export class CollaborationService {
       .sort({ updatedAt: -1 })
       .lean();
 
-    return Promise.all(conversations.map((conversation) => this.enrichConversation(conversation)));
+    return Promise.all(conversations.map((conversation) => this.enrichConversation(conversation, userId)));
   }
 
   async getMessages(conversationId: string) {
@@ -194,7 +201,9 @@ export class CollaborationService {
     await this.ensureAdminAccess(proposal.conversationId, adminId);
 
     if (proposal.status === 'APPROVED' && proposal.createdTaskId) {
-      return proposal;
+      return {
+        proposal: await this.enrichProposal(proposal.toObject()),
+      };
     }
 
     const taskCreationResult = await firstValueFrom(
@@ -226,7 +235,31 @@ export class CollaborationService {
     proposal.createdTaskId = createdTask?.id;
     await proposal.save();
 
-    return this.enrichProposal(proposal.toObject());
+    const assignee = this.toUserSummary(await this.fetchUser(proposal.assignedTo));
+    const systemMessage = await this.messageModel.create({
+      conversationId: proposal.conversationId,
+      senderId: adminId,
+      senderType: 'SYSTEM',
+      content: `Task "${proposal.title}" assigned to @${assignee.fullName}`,
+      messageType: 'TASK_ASSIGNED',
+      metadata: {
+        taskId: createdTask?.id,
+        taskTitle: proposal.title,
+        assigneeId: proposal.assignedTo,
+        assigneeName: assignee.fullName,
+      } satisfies StructuredSystemMessage,
+      timestamp: new Date(),
+    });
+
+    await this.conversationModel.updateOne(
+      { _id: proposal.conversationId },
+      { $set: { lastMessageAt: new Date() } },
+    );
+
+    return {
+      proposal: await this.enrichProposal(proposal.toObject()),
+      systemMessage: await this.enrichMessage(systemMessage.toObject()),
+    };
   }
 
   async rejectProposal(proposalId: string, adminId: string) {
@@ -323,13 +356,29 @@ export class CollaborationService {
     return new Map(entries);
   }
 
-  private async enrichConversation<T extends { adminId: string; memberIds: string[]; participants?: Array<{ userId: string }> }>(conversation: T) {
+  private async enrichConversation<T extends { _id?: { toString(): string } | string; id?: string; adminId: string; memberIds: string[]; participants?: Array<{ userId: string }> }>(conversation: T, viewerUserId?: string) {
     const userMap = await this.fetchUsersByIds([conversation.adminId, ...(conversation.memberIds ?? [])]);
+    const conversationId = conversation.id ?? conversation._id?.toString?.() ?? String(conversation._id ?? '');
+    const pendingProposalCount = conversationId
+      ? await this.proposalModel.countDocuments({
+          conversationId,
+          status: 'DRAFT',
+        })
+      : 0;
+    const pendingAssignedProposalCount = conversationId && viewerUserId
+      ? await this.proposalModel.countDocuments({
+          conversationId,
+          status: 'DRAFT',
+          assignedTo: viewerUserId,
+        })
+      : 0;
 
     return {
       ...conversation,
       admin: userMap.get(conversation.adminId),
       members: (conversation.memberIds ?? []).map((memberId) => userMap.get(memberId)).filter(Boolean),
+      pendingProposalCount,
+      pendingAssignedProposalCount,
       participants: (conversation.participants ?? []).map((participant) => ({
         ...participant,
         user: userMap.get(participant.userId),
