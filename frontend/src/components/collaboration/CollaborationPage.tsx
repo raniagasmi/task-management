@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Badge,
@@ -54,15 +54,25 @@ const CollaborationPage = () => {
   const [isAiThinking, setIsAiThinking] = useState(false);
   const [isModalSubmitting, setIsModalSubmitting] = useState(false);
   const [typingLabel, setTypingLabel] = useState('');
+  const selectedConversationIdRef = useRef('');
+  const currentUserIdRef = useRef('');
 
   const currentUser = authService.getCurrentUser();
   const isAdmin = currentUser?.role?.toLowerCase() === UserRole.ADMIN;
 
   useEffect(() => {
+    selectedConversationIdRef.current = selectedConversationId;
+  }, [selectedConversationId]);
+
+  useEffect(() => {
+    currentUserIdRef.current = currentUser?.id ?? '';
+  }, [currentUser?.id]);
+
+  useEffect(() => {
     const socket = collaborationSocket.connect();
 
     const removeNewMessage = collaborationSocket.onNewMessage((message) => {
-      if (message.conversationId !== selectedConversationId) {
+      if (message.conversationId !== selectedConversationIdRef.current) {
         setConversations((prev) =>
           prev.map((item) => {
             const conversationId = toConversationId(item);
@@ -103,7 +113,7 @@ const CollaborationPage = () => {
     });
 
     const removeAiGenerated = collaborationSocket.onAiGeneratedTasks((payload) => {
-      if (!payload.conversationId || payload.conversationId !== selectedConversationId) {
+      if (!payload.conversationId || payload.conversationId !== selectedConversationIdRef.current) {
         return;
       }
 
@@ -133,7 +143,7 @@ const CollaborationPage = () => {
 
     const removeTaskAssigned = collaborationSocket.onTaskAssigned((payload) => {
       const assignedTo = String(payload.assignedTo ?? payload.proposal?.assignedTo ?? '');
-      if (assignedTo && assignedTo === String(currentUser?.id ?? '')) {
+      if (assignedTo && assignedTo === String(currentUserIdRef.current)) {
         toast({
           title: 'Task assigned successfully',
           description: 'A proposal was approved and converted into a task.',
@@ -148,7 +158,7 @@ const CollaborationPage = () => {
       void refreshConversationList();
 
       const incomingConversationId = payload.conversationId ?? '';
-      if (!incomingConversationId || selectedConversationId) {
+      if (!incomingConversationId || selectedConversationIdRef.current) {
         return;
       }
 
@@ -162,13 +172,13 @@ const CollaborationPage = () => {
     });
 
     const removeTypingStart = collaborationSocket.onTypingStart((payload) => {
-      if (payload.conversationId === selectedConversationId && payload.userId !== currentUser?.id) {
+      if (payload.conversationId === selectedConversationIdRef.current && payload.userId !== currentUserIdRef.current) {
         setTypingLabel('AI is thinking...');
       }
     });
 
     const removeTypingStop = collaborationSocket.onTypingStop((payload) => {
-      if (payload.conversationId === selectedConversationId && payload.userId !== currentUser?.id) {
+      if (payload.conversationId === selectedConversationIdRef.current && payload.userId !== currentUserIdRef.current) {
         setTypingLabel('');
       }
     });
@@ -182,7 +192,7 @@ const CollaborationPage = () => {
       removeTypingStop();
       socket.disconnect();
     };
-  }, [currentUser?.id, selectedConversationId, toast]);
+  }, [toast]);
 
   useEffect(() => {
     const loadData = async () => {

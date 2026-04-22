@@ -20,6 +20,7 @@ type ProposalEventPayload = {
 class CollaborationSocketService {
   private socket: Socket | null = null;
   private registeredUserId = '';
+  private joinedConversationIds = new Set<string>();
 
   private currentUserId() {
     const user = authService.getCurrentUser() as { id?: string; _id?: string; userId?: string } | null;
@@ -36,23 +37,41 @@ class CollaborationSocketService {
     this.registeredUserId = userId;
   }
 
+  private restoreConversationSubscriptions() {
+    if (!this.socket) {
+      return;
+    }
+
+    this.joinedConversationIds.forEach((conversationId) => {
+      this.socket?.emit('joinConversation', { conversationId });
+    });
+  }
+
   connect() {
-    if (this.socket?.connected) {
+    if (this.socket) {
+      if (!this.socket.connected) {
+        this.socket.connect();
+      }
+
       this.ensureUserRegistration();
+      this.restoreConversationSubscriptions();
       return this.socket;
     }
 
     this.socket = io(`${API_BASE_URL}/collaboration`, {
       transports: ['websocket'],
       withCredentials: true,
-      autoConnect: true,
+      autoConnect: false,
     });
 
     this.socket.on('connect', () => {
       this.ensureUserRegistration();
+      this.restoreConversationSubscriptions();
     });
 
+    this.socket.connect();
     this.ensureUserRegistration();
+    this.restoreConversationSubscriptions();
 
     return this.socket;
   }
@@ -64,10 +83,20 @@ class CollaborationSocketService {
   }
 
   joinConversation(conversationId: string) {
+    if (!conversationId) {
+      return;
+    }
+
+    this.joinedConversationIds.add(conversationId);
     this.connect().emit('joinConversation', { conversationId });
   }
 
   leaveConversation(conversationId: string) {
+    if (!conversationId) {
+      return;
+    }
+
+    this.joinedConversationIds.delete(conversationId);
     this.connect().emit('leaveConversation', { conversationId });
   }
 

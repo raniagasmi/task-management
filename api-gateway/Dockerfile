@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.7
+
 # Use Node.js as the base image
 FROM node:20-slim
 
@@ -7,14 +9,14 @@ WORKDIR /usr/src/app
 # Copy package.json and package-lock.json
 COPY package*.json ./
 
-# Install dependencies with network resilience
-RUN npm config set fetch-retries 10 \
+# Install dependencies with network resilience and a persistent npm cache
+RUN --mount=type=cache,target=/root/.npm npm config set fetch-retries 10 \
 	&& npm config set fetch-retry-factor 2 \
 	&& npm config set fetch-retry-mintimeout 20000 \
 	&& npm config set fetch-retry-maxtimeout 180000 \
 	&& npm config set fetch-timeout 300000 \
 	&& npm config set registry https://registry.npmjs.org/ \
-	&& for i in 1 2 3; do npm ci --no-audit --no-fund --prefer-online && break || (echo "npm ci attempt $i/3 failed, clearing cache and retrying..." && npm cache clean --force && sleep 10); done
+	&& for i in 1 2 3; do npm ci --no-audit --no-fund --prefer-offline && break || (echo "npm ci attempt $i/3 failed, clearing cache and retrying..." && npm cache clean --force && sleep 15); done
 
 # Copy the rest of the application code
 COPY . .

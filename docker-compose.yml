@@ -136,6 +136,7 @@ services:
     ports:
       - "3000:3000"
 
+
   frontend:
     build:
       context: ./frontend
