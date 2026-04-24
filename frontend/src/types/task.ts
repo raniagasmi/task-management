@@ -19,6 +19,7 @@ export interface Task {
   assignedTo: string;
   createdBy: string;
   order: number;
+  conversationId?: string;
   createdAt?: Date;
   updatedAt?: Date;
   dueDate?: Date;

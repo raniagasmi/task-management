@@ -19,7 +19,10 @@ import {
   VStack,
   IconButton,
   Text,
+  Badge,
+  HStack,
 } from "@chakra-ui/react";
+import { RepeatIcon, ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
 import {
   DndContext,
   closestCorners,
@@ -31,14 +34,17 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
-import { taskService } from "../../services/task.service";
+import { taskService, UpdateTaskDto } from "../../services/task.service";
+import { userService } from "../../services/user.service";
 import { Task as TaskType, TaskStatus, TaskPriority } from "../../types/task";
+import { UserRole } from "../../types/user";
 import Column from "./Column";
 import Task from "./Task";
 import { ArchiveZone } from "./ArchiveZone";
 import { DeleteZone } from "./DeleteZone";
+import { TaskSuccessAnimation } from "./TaskSuccessAnimation";
 import { statusOrder } from "./Task.constants";
+import { useTimeTracking } from "../../hooks/useAdminMetrics";
 interface BoardData {
   [status: string]: TaskType[];
 }
@@ -46,7 +52,11 @@ interface BoardData {
 
 
 
-export const Board: React.FC = () => {
+interface BoardProps {
+  showControls?: boolean;
+}
+
+export const Board: React.FC<BoardProps> = ({ showControls = true }) => {
   const [boardData, setBoardData] = useState<BoardData>({
     TODO: [],
     IN_PROGRESS: [],
@@ -55,14 +65,43 @@ export const Board: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [archivedTasks, setArchivedTasks] = useState<TaskType[]>([]);
   const [showArchivedTasks, setShowArchivedTasks] = useState(false);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [successAnimation, setSuccessAnimation] = useState<{
+    show: boolean;
+    title: string;
+  }>({ show: false, title: "" });
+  const { currentStatus, togglePause } = useTimeTracking(currentUserId);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [currentTask, setCurrentTask] = useState<Partial<TaskType> | null>(null);
   const toast = useToast();
+
+  // Get current user info for role-based filtering
+  useEffect(() => {
+    const getCurrentUserInfo = async () => {
+      try {
+        const user = await userService.getCurrentUser();
+        setUserRole(user.role);
+        setCurrentUserId(user.id);
+      } catch (error) {
+        console.error("Failed to get user info:", error);
+      }
+    };
+    getCurrentUserInfo();
+  }, []);
+
   const fetchTasks = useCallback(async () => {
     try {
       const tasks = await taskService.getAllTasks();
-      const activeonly = tasks.filter(task => task.active !== false);
-      const archivedOnly = tasks.filter(task => task.active === false);
+      
+      // Role-based filtering: employees see only assigned tasks
+      let filteredTasks = tasks;
+      if (userRole !== UserRole.ADMIN && currentUserId) {
+        filteredTasks = tasks.filter((t) => t.assignedTo === currentUserId);
+      }
+
+      const activeonly = filteredTasks.filter(task => task.active !== false);
+      const archivedOnly = filteredTasks.filter(task => task.active === false);
       const groupedTasks = activeonly.reduce((acc, task) => {
         acc[task.status] = [...(acc[task.status] || []), task];
         return acc;
@@ -81,7 +120,7 @@ export const Board: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, userRole, currentUserId]);
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
@@ -197,18 +236,19 @@ export const Board: React.FC = () => {
     const taskToMove = boardData[sourceColumn].find(t => t.id === activeId);
     if (!taskToMove) return;
 
+    let updatedDestinationItems: TaskType[] = [];
     setBoardData(prev => {
       const newSourceItems = prev[sourceColumn].filter(t => t.id !== activeId);
 
-      const newDestinationItems = [...prev[destinationColumn]];
+      updatedDestinationItems = [...prev[destinationColumn]];
       if (!isOverColumn) {
         const overIndex = prev[destinationColumn].findIndex(t => t.id === overId);
-        newDestinationItems.splice(overIndex, 0, {
+        updatedDestinationItems.splice(overIndex, 0, {
           ...taskToMove,
           status: destinationColumn,
         });
       } else {
-        newDestinationItems.push({
+        updatedDestinationItems.push({
           ...taskToMove,
           status: destinationColumn,
         });
@@ -217,14 +257,30 @@ export const Board: React.FC = () => {
       return {
         ...prev,
         [sourceColumn]: newSourceItems,
-        [destinationColumn]: newDestinationItems,
+        [destinationColumn]: updatedDestinationItems,
       };
     });
 
     try {
       console.log("Moving task from", activeId, "to", destinationColumn);
       await taskService.updateTaskStatus(activeId, destinationColumn);
-      await updateTaskOrders(boardData[destinationColumn]);
+      await updateTaskOrders(updatedDestinationItems);
+
+      // Trigger success animation when task moved to DONE
+      if (destinationColumn === TaskStatus.DONE) {
+        setSuccessAnimation({
+          show: true,
+          title: taskToMove.title || "Task",
+        });
+      }
+
+      toast({
+        title: "Task updated",
+        description: `Task moved to ${destinationColumn.replace("_", " ")}`,
+        status: "success",
+        duration: 2000,
+        isClosable: true,
+      });
     } catch (error) {
       toast({
         title: "Error updating task",
@@ -314,14 +370,21 @@ export const Board: React.FC = () => {
     }
 
     try {
+      const updatePayload: UpdateTaskDto = {
+        title: currentTask.title,
+        description: currentTask.description,
+        priority: currentTask.priority as TaskPriority,
+        dueDate: currentTask.dueDate ? new Date(currentTask.dueDate) : undefined,
+      };
+
+      if (userRole === UserRole.ADMIN) {
+        updatePayload.assignedTo = currentTask.assignedTo;
+      } else {
+        updatePayload.assignedTo = currentUserId;
+      }
+
       if (currentTask.id) {
-        await taskService.updateTask(currentTask.id, {
-          title: currentTask.title,
-          description: currentTask.description,
-          priority: currentTask.priority as TaskPriority,
-          assignedTo: currentTask.assignedTo,
-          dueDate: currentTask.dueDate ? new Date(currentTask.dueDate) : undefined,
-        });
+        await taskService.updateTask(currentTask.id, updatePayload);
         toast({
           title: "Task updated",
           status: "success",
@@ -334,7 +397,7 @@ export const Board: React.FC = () => {
           description: currentTask.description,
           status: currentTask.status || TaskStatus.TODO,
           priority: currentTask.priority as TaskPriority,
-          assignedTo: currentTask.assignedTo || '',
+          assignedTo: userRole === UserRole.ADMIN ? currentTask.assignedTo || '' : currentUserId,
           order: boardData[currentTask.status || TaskStatus.TODO].length,
           dueDate: currentTask.dueDate ? new Date(currentTask.dueDate) : undefined,
         });
@@ -366,9 +429,38 @@ export const Board: React.FC = () => {
 
   return (
     <Box p={4}>
+      {/* Success Animation */}
+      <TaskSuccessAnimation
+        show={successAnimation.show}
+        taskTitle={successAnimation.title}
+        onComplete={() => setSuccessAnimation({ show: false, title: "" })}
+      />
+
       <Heading color="var(--font-color)" size="lg" mb={6} textAlign="center">
         Task Board
       </Heading>
+      {showControls && currentUserId && (
+        <HStack justify="center" mb={4} spacing={3}>
+          <Button size="sm" colorScheme={currentStatus === "PAUSE" ? "orange" : "green"} onClick={togglePause}>
+            {currentStatus === "PAUSE" ? "▶️ Resume" : "⏸️ Pause"}
+          </Button>
+          <IconButton
+            aria-label="Refresh"
+            icon={<RepeatIcon />}
+            size="sm"
+            colorScheme="blue"
+            onClick={fetchTasks}
+          />
+        </HStack>
+      )}
+      {userRole !== UserRole.ADMIN && (
+        <HStack justify="center" mb={4}>
+          <Badge colorScheme="blue">Your Tasks</Badge>
+          <Text fontSize="sm" color="gray.600">
+            You can only see and work on your assigned tasks
+          </Text>
+        </HStack>
+      )}
       <DndContext
         collisionDetection={closestCorners}
         onDragStart={handleDragStart}
@@ -473,11 +565,13 @@ export const Board: React.FC = () => {
                   </option>
                 ))}
               </Select>
-              <Input
-                placeholder="Assigned to (email)"
-                value={currentTask?.assignedTo || ""}
-                onChange={(e) => setCurrentTask(prev => ({ ...prev, assignedTo: e.target.value }))}
-              />
+              {userRole === UserRole.ADMIN && (
+                <Input
+                  placeholder="Assigned to (email)"
+                  value={currentTask?.assignedTo || ""}
+                  onChange={(e) => setCurrentTask(prev => ({ ...prev, assignedTo: e.target.value }))}
+                />
+              )}
 
               <Input
                 type="date"
