@@ -34,8 +34,8 @@ export class TaskController {
   }
 
   @MessagePattern({ cmd: 'removeTask' })
-  remove(@Payload() id: string) {
-    return this.taskService.remove(id);
+  remove(@Payload() payload: { id: string; userId: string; role?: string }) {
+    return this.taskService.remove(payload.id, payload.userId, payload.role);
   }
 
   @MessagePattern({ cmd: 'updateTaskOrder' })

@@ -347,10 +347,26 @@ export class CollaborationService {
     };
   }
 
+  private fallbackUserSummary(userId: string): UserSummary {
+    return {
+      id: userId,
+      firstName: '',
+      lastName: '',
+      role: 'unknown',
+      fullName: userId,
+    };
+  }
+
   private async fetchUsersByIds(userIds: string[]) {
     const uniqueIds = Array.from(new Set(userIds.filter(Boolean)));
     const entries = await Promise.all(
-      uniqueIds.map(async (userId) => [userId, this.toUserSummary(await this.fetchUser(userId))] as const),
+      uniqueIds.map(async (userId) => {
+        try {
+          return [userId, this.toUserSummary(await this.fetchUser(userId))] as const;
+        } catch {
+          return [userId, this.fallbackUserSummary(userId)] as const;
+        }
+      }),
     );
 
     return new Map(entries);

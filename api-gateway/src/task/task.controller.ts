@@ -86,11 +86,20 @@ export class TaskController {
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
-  @Roles('admin')
-  async remove(@Param('id') id: string): Promise<{ message: string }> {
+  async remove(
+    @Param('id') id: string,
+    @Request() req: { user: { userId?: string; role?: string } },
+  ): Promise<{ message: string }> {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
     const result = await this.taskClient
-      .send<{ message: string } | undefined>({ cmd: 'removeTask' }, id)
+      .send<{ message: string } | undefined>(
+        { cmd: 'removeTask' },
+        { id, userId, role: req.user?.role ?? '' },
+      )
       .toPromise();
 
     if (!result) {

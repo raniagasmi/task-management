@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Task, TaskStatus } from '../entities/task.entity';
@@ -63,7 +68,22 @@ export class TaskService {
     return await this.taskRepository.save(task);
   }
 
-  async remove(id: string): Promise<{ message: string }> {
+  async remove(
+    id: string,
+    userId: string,
+    role?: string,
+  ): Promise<{ message: string }> {
+    const task = await this.findOne(id);
+    const normalizedRole = (role ?? '').toLowerCase();
+    const canDelete =
+      normalizedRole === 'admin' ||
+      task.createdBy === userId ||
+      task.assignedTo === userId;
+
+    if (!canDelete) {
+      throw new ForbiddenException('You do not have permission to delete this task');
+    }
+
     const result = await this.taskRepository.delete(id);
     if (result.affected === 0) {
       throw new NotFoundException(`Task with ID ${id} not found`);
