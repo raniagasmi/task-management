@@ -17,6 +17,7 @@ import { Req, Body } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { Inject } from '@nestjs/common';
 import { AuditService } from './audit.service';
+import { CollaborationGateway } from '../collaboration/collaboration.gateway';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard)
@@ -25,6 +26,7 @@ export class UserController {
     private readonly userService: UserService,
     @Inject('USER_SERVICE') private readonly userClient: ClientProxy,
     private readonly auditService: AuditService,
+    private readonly collaborationGateway: CollaborationGateway,
   ) {}
 
   @Get('me')
@@ -180,6 +182,24 @@ export class UserController {
       console.error('Error updating user:', error);
       throw error;
     }
+  }
+
+  @Put('me/presence')
+  async updateMyPresence(@Body() updatePresenceDto: any, @Req() req: Request) {
+    const currentUser = req.user as { userId?: string } | undefined;
+    if (!currentUser?.userId) {
+      throw new ForbiddenException('User not authenticated');
+    }
+
+    const updatedUser = await this.userService.updatePresence(currentUser.userId, updatePresenceDto);
+    this.collaborationGateway.emitPresenceUpdated({
+      userId: currentUser.userId,
+      status: updatedUser?.presenceStatus ?? 'OFFLINE',
+      lastActiveAt: updatedUser?.lastActiveAt ? new Date(updatedUser.lastActiveAt).toISOString() : null,
+      updatedAt: updatedUser?.presenceUpdatedAt ? new Date(updatedUser.presenceUpdatedAt).toISOString() : null,
+    });
+
+    return updatedUser;
   }
 
   @Put(':id/password')

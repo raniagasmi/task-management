@@ -4,10 +4,12 @@ import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { AuthModule } from '../auth/auth.module';
 import { AuditService } from './audit.service';
+import { CollaborationModule } from '../collaboration/collaboration.module';
 
 @Module({
   imports: [
     AuthModule,
+    CollaborationModule,
     ClientsModule.register([
       {
         name: 'USER_SERVICE',

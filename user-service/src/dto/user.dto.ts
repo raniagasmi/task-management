@@ -1,5 +1,5 @@
-import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
-import { UserRole } from '../schemas/user.schema';
+import { IsEmail, IsEnum, IsISO8601, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
+import { PresenceStatus, UserRole } from '../schemas/user.schema';
 
 export class CreateUserDto {
     @IsNotEmpty()
@@ -46,4 +46,14 @@ export class UpdateUserDto {
 
     @IsEnum(UserRole)
     role?: UserRole;
+}
+
+export class UpdatePresenceDto {
+    @IsOptional()
+    @IsEnum(PresenceStatus)
+    status?: PresenceStatus;
+
+    @IsOptional()
+    @IsISO8601()
+    lastActiveAt?: string;
 }

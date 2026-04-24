@@ -1,84 +1,114 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { timeTrackingService } from '../services/time-tracking.service';
 import { adminAnalyticsService } from '../services/admin-analytics.service';
 import { taskService } from '../services/task.service';
 import { userService } from '../services/user.service';
+import { collaborationSocket } from '../services/collaboration.socket';
 import {
   EmployeeMetrics,
   AdminDashboardData,
   ProjectMetrics,
   Alert,
-  TimeTrackingSession,
 } from '../types/analytics';
 import { Task } from '../types/task';
-import { User } from '../types/user';
+import { PresenceStatus } from '../types/user';
 
-/**
- * Hook: Track time for current user (ONLINE/PAUSE/OFFLINE)
- */
 export const useTimeTracking = (userId?: string) => {
-  const [currentStatus, setCurrentStatus] = useState('OFFLINE');
-  const [focusTime, setFocusTime] = useState(0); // in minutes
-  const [pauseTime, setPauseTime] = useState(0);
+  const [currentStatus, setCurrentStatus] = useState<PresenceStatus>('OFFLINE');
+  const lastPresencePingRef = useRef(0);
+  const statusRef = useRef<PresenceStatus>('OFFLINE');
 
   useEffect(() => {
-    if (!userId) return;
+    statusRef.current = currentStatus;
+  }, [currentStatus]);
 
-    timeTrackingService.startTracking(userId);
+  useEffect(() => {
+    if (!userId) {
+      return;
+    }
 
-    // Setup activity detection
-    const handleActivity = () => {
-      timeTrackingService.recordActivity(userId);
+    let isMounted = true;
+
+    const syncPresence = async (status?: PresenceStatus) => {
+      const updatedUser = await userService.updateMyPresence({
+        status,
+        lastActiveAt: new Date().toISOString(),
+      });
+
+      if (isMounted) {
+        setCurrentStatus((updatedUser.presenceStatus as PresenceStatus) || 'OFFLINE');
+      }
     };
+
+    const initializePresence = async () => {
+      try {
+        const currentUser = await userService.getCurrentUser();
+        const initialStatus: PresenceStatus =
+          currentUser.presenceStatus === 'PAUSE' ? 'PAUSE' : 'ONLINE';
+        await syncPresence(initialStatus);
+      } catch (error) {
+        console.error('Failed to initialize presence:', error);
+      }
+    };
+
+    const handleActivity = () => {
+      if (statusRef.current === 'PAUSE') {
+        return;
+      }
+
+      const now = Date.now();
+      if (now - lastPresencePingRef.current < 15000) {
+        return;
+      }
+
+      lastPresencePingRef.current = now;
+      void syncPresence('ONLINE');
+    };
+
+    const cleanupPresenceListener = collaborationSocket.onPresenceUpdated((payload) => {
+      if (payload.userId === userId) {
+        setCurrentStatus(payload.status);
+      }
+    });
+
+    void initializePresence();
 
     window.addEventListener('mousemove', handleActivity);
     window.addEventListener('keypress', handleActivity);
-
-    // Status change listener
-    timeTrackingService.onStatusChange(userId, (status) => {
-      setCurrentStatus(status);
-    });
-
-    // Calculate focus time periodically
-    const calculateInterval = setInterval(() => {
-      const sessions = timeTrackingService.getAllSessions();
-      const online = timeTrackingService.calculateTimeByStatus(
-        userId,
-        sessions,
-        'ONLINE'
-      );
-      const pause = timeTrackingService.calculateTimeByStatus(
-        userId,
-        sessions,
-        'PAUSE'
-      );
-
-      setFocusTime(Math.round(online));
-      setPauseTime(Math.round(pause));
-    }, 10000); // Update every 10 seconds
+    window.addEventListener('focus', handleActivity);
 
     return () => {
+      isMounted = false;
+      cleanupPresenceListener();
       window.removeEventListener('mousemove', handleActivity);
       window.removeEventListener('keypress', handleActivity);
-      clearInterval(calculateInterval);
-      // Optionally stop tracking on unmount
-      // timeTrackingService.stopTracking(userId);
+      window.removeEventListener('focus', handleActivity);
     };
   }, [userId]);
 
   const togglePause = useCallback(() => {
-    if (!userId) return;
-    const session = timeTrackingService.getSession(userId);
-    const newStatus = session?.status === 'PAUSE' ? 'ONLINE' : 'PAUSE';
-    timeTrackingService.updateStatus(userId, newStatus as 'ONLINE' | 'PAUSE');
-  }, [userId]);
+    if (!userId) {
+      return;
+    }
 
-  return { currentStatus, focusTime, pauseTime, togglePause };
+    const nextStatus: PresenceStatus = currentStatus === 'PAUSE' ? 'ONLINE' : 'PAUSE';
+
+    void userService
+      .updateMyPresence({
+        status: nextStatus,
+        lastActiveAt: new Date().toISOString(),
+      })
+      .then((updatedUser) => {
+        setCurrentStatus((updatedUser.presenceStatus as PresenceStatus) || nextStatus);
+      })
+      .catch((error) => {
+        console.error('Failed to toggle presence:', error);
+      });
+  }, [currentStatus, userId]);
+
+  return { currentStatus, focusTime: 0, pauseTime: 0, togglePause };
 };
 
-/**
- * Hook: Load employee metrics for admin dashboard
- */
 export const useEmployeeMetrics = (shouldLoad: boolean = false) => {
   const [employees, setEmployees] = useState<EmployeeMetrics[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,10 +128,8 @@ export const useEmployeeMetrics = (shouldLoad: boolean = false) => {
           taskService.getAllTasks(),
         ]);
 
-        const timeSessions = timeTrackingService.getAllSessions();
-
         const metrics = allUsers.map((user) =>
-          adminAnalyticsService.calculateEmployeeMetrics(user, allTasks, timeSessions)
+          adminAnalyticsService.calculateEmployeeMetrics(user, allTasks, [])
         );
 
         setEmployees(metrics);
@@ -115,19 +143,36 @@ export const useEmployeeMetrics = (shouldLoad: boolean = false) => {
       }
     };
 
-    loadMetrics();
+    void loadMetrics();
 
-    // Refresh every 30 seconds
-    const interval = setInterval(loadMetrics, 30000);
-    return () => clearInterval(interval);
+    const cleanupPresenceListener = collaborationSocket.onPresenceUpdated((payload) => {
+      setEmployees((currentEmployees) =>
+        currentEmployees.map((employee) =>
+          employee.userId === payload.userId
+            ? {
+                ...employee,
+                currentStatus: payload.status,
+                lastActiveAt: payload.lastActiveAt ? new Date(payload.lastActiveAt) : employee.lastActiveAt,
+                updatedAt: payload.updatedAt ? new Date(payload.updatedAt) : new Date(),
+              }
+            : employee
+        )
+      );
+    });
+
+    const interval = setInterval(() => {
+      void loadMetrics();
+    }, 30000);
+
+    return () => {
+      cleanupPresenceListener();
+      clearInterval(interval);
+    };
   }, [shouldLoad]);
 
-  return { employees, loading, error, refetch: () => { } };
+  return { employees, loading, error, refetch: () => {} };
 };
 
-/**
- * Hook: Load project metrics for admin dashboard
- */
 export const useProjectMetrics = (shouldLoad: boolean = false) => {
   const [projects, setProjects] = useState<ProjectMetrics[]>([]);
   const [loading, setLoading] = useState(true);
@@ -147,7 +192,6 @@ export const useProjectMetrics = (shouldLoad: boolean = false) => {
           taskService.getAllTasks(),
         ]);
 
-        // Group tasks by conversation (project)
         const projectMap = new Map<string, Task[]>();
         allTasks.forEach((task) => {
           const projectId = task.conversationId || 'default-project';
@@ -172,19 +216,18 @@ export const useProjectMetrics = (shouldLoad: boolean = false) => {
       }
     };
 
-    loadMetrics();
+    void loadMetrics();
 
-    // Refresh every 30 seconds
-    const interval = setInterval(loadMetrics, 30000);
+    const interval = setInterval(() => {
+      void loadMetrics();
+    }, 30000);
+
     return () => clearInterval(interval);
   }, [shouldLoad]);
 
   return { projects, loading, error };
 };
 
-/**
- * Hook: Load alerts for admin dashboard
- */
 export const useAdminAlerts = (
   shouldLoad: boolean = false,
   employeeMetrics: EmployeeMetrics[] = [],
@@ -222,19 +265,18 @@ export const useAdminAlerts = (
       }
     };
 
-    loadAlerts();
+    void loadAlerts();
 
-    // Refresh every 60 seconds
-    const interval = setInterval(loadAlerts, 60000);
+    const interval = setInterval(() => {
+      void loadAlerts();
+    }, 60000);
+
     return () => clearInterval(interval);
   }, [shouldLoad, employeeMetrics, projectMetrics]);
 
   return { alerts, loading, error };
 };
 
-/**
- * Hook: Load complete admin dashboard data
- */
 export const useAdminDashboard = (isAdmin: boolean = false) => {
   const { employees, loading: empLoading, error: empError } = useEmployeeMetrics(isAdmin);
   const { projects, loading: projLoading, error: projError } = useProjectMetrics(isAdmin);
@@ -271,20 +313,23 @@ export const useAdminDashboard = (isAdmin: boolean = false) => {
       }
     };
 
-    loadTasks();
-    const interval = setInterval(loadTasks, 30000);
+    void loadTasks();
+    const interval = setInterval(() => {
+      void loadTasks();
+    }, 30000);
     return () => clearInterval(interval);
   }, [isAdmin]);
 
   useEffect(() => {
-    if (!isAdmin || empLoading || projLoading || alertLoading || tasksLoading) return;
+    if (!isAdmin || empLoading || projLoading || alertLoading || tasksLoading) {
+      return;
+    }
 
-    const timeSessions = timeTrackingService.getAllSessions();
     const compiled = adminAnalyticsService.compileDashboardData(
       employees,
       projects,
       alerts,
-      timeSessions,
+      timeTrackingService.getAllSessions(),
       tasks
     );
 

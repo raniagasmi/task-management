@@ -1,6 +1,6 @@
 import api from './api.service';
 import { API_ENDPOINTS } from '../config/api.config';
-import { User } from '../types/user';
+import { PresenceStatus, User } from '../types/user';
 
 type UserApi = User & { _id?: string };
 
@@ -140,6 +140,22 @@ export const userService = {
       await api.delete(API_ENDPOINTS.USERS.BY_ID(id));
     } catch (error) {
       console.error('Error deleting user:', getErrorMessage(error));
+      throw error;
+    }
+  },
+
+  updateMyPresence: async (data: { status?: PresenceStatus; lastActiveAt?: string }): Promise<User> => {
+    try {
+      const response = await api.put<UserApi>(API_ENDPOINTS.USERS.ME_PRESENCE, data);
+      const normalizedUser = normalizeUser(response.data);
+      const userJson = localStorage.getItem('user');
+      if (userJson) {
+        const existingUser = JSON.parse(userJson);
+        localStorage.setItem('user', JSON.stringify({ ...existingUser, ...normalizedUser }));
+      }
+      return normalizedUser;
+    } catch (error) {
+      console.error('Error updating presence:', getErrorMessage(error));
       throw error;
     }
   },

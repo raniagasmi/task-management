@@ -9,6 +9,8 @@ export enum UserRole {
   MARKETER = 'marketer',
 }
 
+export type PresenceStatus = 'ONLINE' | 'PAUSE' | 'OFFLINE';
+
 export interface User {
   id: string;
   email: string;
@@ -16,6 +18,9 @@ export interface User {
   lastName: string;
   role: UserRole;
   isActive: boolean;
+  presenceStatus?: PresenceStatus;
+  lastActiveAt?: string | null;
+  presenceUpdatedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

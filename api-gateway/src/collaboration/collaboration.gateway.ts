@@ -1,11 +1,15 @@
 import {
   ConnectedSocket,
+  OnGatewayDisconnect,
   MessageBody,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
+import { Inject } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
 import { Server, Socket } from 'socket.io';
+import { firstValueFrom } from 'rxjs';
 
 @WebSocketGateway({
   namespace: '/collaboration',
@@ -14,9 +18,15 @@ import { Server, Socket } from 'socket.io';
     credentials: true,
   },
 })
-export class CollaborationGateway {
+export class CollaborationGateway implements OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server;
+
+  private readonly disconnectTimers = new Map<string, NodeJS.Timeout>();
+
+  constructor(
+    @Inject('USER_SERVICE') private readonly userClient: ClientProxy,
+  ) {}
 
   @SubscribeMessage('registerUser')
   registerUser(
@@ -24,10 +34,21 @@ export class CollaborationGateway {
     @ConnectedSocket() client: Socket,
   ) {
     if (body?.userId) {
+      client.data.userId = body.userId;
       client.join(this.userRoom(body.userId));
+      this.clearDisconnectTimer(body.userId);
     }
 
     return { ok: true };
+  }
+
+  handleDisconnect(client: Socket) {
+    const userId = client.data?.userId as string | undefined;
+    if (!userId) {
+      return;
+    }
+
+    this.scheduleOfflineUpdate(userId);
   }
 
   @SubscribeMessage('joinConversation')
@@ -105,6 +126,10 @@ export class CollaborationGateway {
     this.emitToConversationRoom(payload, 'task:created');
   }
 
+  emitPresenceUpdated(payload: { userId: string; status: string; lastActiveAt: string | null; updatedAt: string | null }) {
+    this.server?.emit('presence:updated', payload);
+  }
+
   private emitToConversationRoom(payload: { conversationId: string }, eventName: string) {
     this.server?.to(this.roomName(payload.conversationId)).emit(eventName, payload);
   }
@@ -115,5 +140,47 @@ export class CollaborationGateway {
 
   private userRoom(userId: string) {
     return `user:${userId}`;
+  }
+
+  private clearDisconnectTimer(userId: string) {
+    const existing = this.disconnectTimers.get(userId);
+    if (existing) {
+      clearTimeout(existing);
+      this.disconnectTimers.delete(userId);
+    }
+  }
+
+  private scheduleOfflineUpdate(userId: string) {
+    this.clearDisconnectTimer(userId);
+
+    const timeout = setTimeout(async () => {
+      const sockets = await this.server?.in(this.userRoom(userId)).fetchSockets();
+      if (sockets && sockets.length > 0) {
+        this.disconnectTimers.delete(userId);
+        return;
+      }
+
+      try {
+        const updatedUser = await firstValueFrom(
+          this.userClient.send('user_update_presence', {
+            id: userId,
+            data: { status: 'OFFLINE' },
+          }),
+        );
+
+        this.emitPresenceUpdated({
+          userId,
+          status: updatedUser?.presenceStatus ?? 'OFFLINE',
+          lastActiveAt: updatedUser?.lastActiveAt ? new Date(updatedUser.lastActiveAt).toISOString() : null,
+          updatedAt: updatedUser?.presenceUpdatedAt ? new Date(updatedUser.presenceUpdatedAt).toISOString() : null,
+        });
+      } catch (error) {
+        console.error('Failed to update presence on disconnect:', error);
+      } finally {
+        this.disconnectTimers.delete(userId);
+      }
+    }, 10000);
+
+    this.disconnectTimers.set(userId, timeout);
   }
 }

@@ -1,11 +1,11 @@
 import { Injectable, NotFoundException,BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, isValidObjectId } from 'mongoose';
-import { User, UserDocument } from '../schemas/user.schema';
-import { UpdateUserDto } from '../dto/user.dto';
+import { PresenceStatus, User, UserDocument } from '../schemas/user.schema';
+import { UpdatePresenceDto, UpdateUserDto } from '../dto/user.dto';
 import * as bcrypt from 'bcrypt';
 import { keys } from '../config/keys';
-import { v4 as uuidv4, validate as validateUuid } from 'uuid'; // Import the uuid library
+import { validate as validateUuid } from 'uuid';
 
 @Injectable()
 export class UserService {
@@ -110,5 +110,40 @@ export class UserService {
 
     async findByEmail(email: string): Promise<UserDocument> {
         return this.userModel.findOne({ email }).select('-password');
+    }
+
+    async updatePresence(id: string, updatePresenceDto: UpdatePresenceDto): Promise<UserDocument> {
+        if (!isValidObjectId(id)) {
+            throw new Error('Invalid user ID format');
+        }
+
+        const nextStatus = updatePresenceDto.status;
+        const timestamp = updatePresenceDto.lastActiveAt
+            ? new Date(updatePresenceDto.lastActiveAt)
+            : new Date();
+
+        const updates: Record<string, unknown> = {
+            presenceUpdatedAt: new Date(),
+        };
+
+        if (nextStatus) {
+            updates.presenceStatus = nextStatus;
+        }
+
+        if (nextStatus !== PresenceStatus.OFFLINE) {
+            updates.lastActiveAt = timestamp;
+        }
+
+        const user = await this.userModel.findByIdAndUpdate(
+            id,
+            updates,
+            { new: true },
+        ).select('-password');
+
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        return user;
     }
 }

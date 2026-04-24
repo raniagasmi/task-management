@@ -37,6 +37,12 @@ export class UserService {
     );
   }
 
+  async updatePresence(id: string, data: any) {
+    return firstValueFrom(
+      this.userServiceClient.send('user_update_presence', { id, data }),
+    );
+  }
+
   async updatePassword(id: string, data: any) {
     try {
       const response = await firstValueFrom(

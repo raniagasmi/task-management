@@ -17,6 +17,13 @@ type ProposalEventPayload = {
   userIds?: string[];
 };
 
+type PresencePayload = {
+  userId: string;
+  status: 'ONLINE' | 'PAUSE' | 'OFFLINE';
+  lastActiveAt: string | null;
+  updatedAt: string | null;
+};
+
 class CollaborationSocketService {
   private socket: Socket | null = null;
   private registeredUserId = '';
@@ -176,6 +183,15 @@ class CollaborationSocketService {
 
     return () => {
       socket.off('typing:stop', handler);
+    };
+  }
+
+  onPresenceUpdated(handler: (payload: PresencePayload) => void) {
+    const socket = this.connect();
+    socket.on('presence:updated', handler);
+
+    return () => {
+      socket.off('presence:updated', handler);
     };
   }
 }

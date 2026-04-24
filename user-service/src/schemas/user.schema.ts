@@ -12,6 +12,12 @@ export enum UserRole {
     MARKETER = 'marketer',
 }
 
+export enum PresenceStatus {
+    ONLINE = 'ONLINE',
+    PAUSE = 'PAUSE',
+    OFFLINE = 'OFFLINE',
+}
+
 @Schema({ timestamps: true })
 export class User {
     @Prop({ required: true })
@@ -32,7 +38,14 @@ export class User {
     @Prop({ default: true })
     isActive!: boolean;
 
-    
+    @Prop({ type: String, enum: PresenceStatus, default: PresenceStatus.OFFLINE })
+    presenceStatus!: PresenceStatus;
+
+    @Prop({ type: Date, default: null })
+    lastActiveAt!: Date | null;
+
+    @Prop({ type: Date, default: null })
+    presenceUpdatedAt!: Date | null;
 }
 
 export type UserDocument = User & Document;

@@ -1,6 +1,6 @@
 import { Controller, Get, Put, Delete, Param, Body, UseGuards, Req, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { UserService } from './user.service';
-import { UpdateUserDto } from '../dto/user.dto';
+import { UpdatePresenceDto, UpdateUserDto } from '../dto/user.dto';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Request } from 'express';
@@ -76,6 +76,17 @@ export class UserController {
         return this.userService.update(id, updateUserDto);
     }
 
+    @Put('me/presence')
+    @UseGuards(JwtAuthGuard)
+    async updateMyPresence(@Body() updatePresenceDto: UpdatePresenceDto, @Req() req: Request) {
+        const currentUser = req.user as { userId?: string } | undefined;
+        if (!currentUser?.userId) {
+            throw new ForbiddenException('User not authenticated');
+        }
+
+        return this.userService.updatePresence(currentUser.userId, updatePresenceDto);
+    }
+
     @Delete(':id')
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles('admin')
@@ -116,6 +127,11 @@ export class UserController {
     @MessagePattern('user_update_password')
     async updatePasswordMicroservice(@Payload() payload: { id: string; data: any }) {
         return this.userService.updatePassword(payload.id, payload.data);
+    }
+
+    @MessagePattern('user_update_presence')
+    async updatePresenceMicroservice(@Payload() payload: { id: string; data: UpdatePresenceDto }) {
+        return this.userService.updatePresence(payload.id, payload.data);
     }
 
     @MessagePattern({ cmd: 'findAllUsers' })

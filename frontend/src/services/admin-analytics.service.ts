@@ -9,7 +9,7 @@ import {
   TimeTrackingSession,
 } from '../types/analytics';
 import { Task, TaskPriority, TaskStatus } from '../types/task';
-import { User } from '../types/user';
+import { PresenceStatus, User } from '../types/user';
 
 /**
  * Admin Analytics Service
@@ -56,8 +56,12 @@ class AdminAnalyticsService {
     const offlineTime = this.calculateFocusTime(userSessions, 'OFFLINE');
 
     const currentSession = userSessions[userSessions.length - 1];
-    const currentStatus = currentSession?.status || 'OFFLINE';
-    const lastActiveAt = currentSession?.startedAt || new Date();
+    const currentStatus = (employee.presenceStatus ||
+      currentSession?.status ||
+      'OFFLINE') as PresenceStatus;
+    const lastActiveAt = employee.lastActiveAt
+      ? new Date(employee.lastActiveAt)
+      : currentSession?.startedAt || new Date();
 
     // Performance score (0-100)
     const performanceScore = this.calculatePerformanceScore(
