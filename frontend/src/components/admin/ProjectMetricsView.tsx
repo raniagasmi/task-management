@@ -151,7 +151,7 @@ const WorkloadDistributionTable: React.FC<{ project: ProjectMetrics }> = ({ proj
 
             return (
               <Tr key={item.employeeId}>
-                <Td fontSize="sm">{item.employeeId.slice(0, 8)}</Td>
+                <Td fontSize="sm">{item.employeeName}</Td>
                 <Td isNumeric fontWeight="bold">
                   {item.taskCount}
                 </Td>

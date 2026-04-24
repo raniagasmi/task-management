@@ -80,6 +80,7 @@ export interface ProjectMetrics {
   bottlenecks: string[]; // task IDs stuck > 48 hours
   workloadDistribution: {
     employeeId: string;
+    employeeName: string;
     taskCount: number;
     load: number;
   }[];

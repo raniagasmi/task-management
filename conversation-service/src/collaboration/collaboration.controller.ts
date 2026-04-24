@@ -16,6 +16,11 @@ export class CollaborationController {
     return this.collaborationService.getConversationsForUser(userId);
   }
 
+  @Get('conversations')
+  getAllConversations() {
+    return this.collaborationService.getAllConversations();
+  }
+
   @Get('conversations/:id/messages')
   getMessages(@Param('id') id: string) {
     return this.collaborationService.getMessages(id);

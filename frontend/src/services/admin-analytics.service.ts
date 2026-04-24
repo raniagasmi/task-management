@@ -192,7 +192,12 @@ class AdminAnalyticsService {
   /**
    * Calculate project metrics
    */
-  calculateProjectMetrics(projectId: string, allTasks: Task[], employees: User[]): ProjectMetrics {
+  calculateProjectMetrics(
+    projectId: string,
+    allTasks: Task[],
+    employees: User[],
+    projectName?: string
+  ): ProjectMetrics {
     const projectTasks = allTasks.filter((t) => t.conversationId === projectId || !t.conversationId);
 
     const tasksByStatus = {
@@ -224,6 +229,7 @@ class AdminAnalyticsService {
 
       return {
         employeeId: emp.id,
+        employeeName: `${emp.firstName} ${emp.lastName}`.trim() || 'Unknown Employee',
         taskCount: empTasks.length,
         load,
       };
@@ -250,7 +256,7 @@ class AdminAnalyticsService {
 
     return {
       projectId,
-      name: `Project ${projectId.slice(0, 8)}`,
+      name: projectName?.trim() || (projectId === 'default-project' ? 'General Tasks' : 'Untitled Project'),
       completionPercentage: Math.round(completionPercentage),
       tasksByStatus,
       bottlenecks,

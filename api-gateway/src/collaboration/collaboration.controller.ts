@@ -43,6 +43,13 @@ export class CollaborationController {
     return this.collaborationService.getConversationsForUser(userId);
   }
 
+  @Get('conversations')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  async getAllConversations() {
+    return this.collaborationService.getAllConversations();
+  }
+
   @Get('conversations/:id/messages')
   async getMessages(@Param('id') id: string) {
     return this.collaborationService.getMessages(id);

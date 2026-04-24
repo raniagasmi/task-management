@@ -136,6 +136,15 @@ export class CollaborationService {
     return Promise.all(conversations.map((conversation) => this.enrichConversation(conversation, userId)));
   }
 
+  async getAllConversations() {
+    const conversations = await this.conversationModel
+      .find()
+      .sort({ updatedAt: -1 })
+      .lean();
+
+    return Promise.all(conversations.map((conversation) => this.enrichConversation(conversation)));
+  }
+
   async getMessages(conversationId: string) {
     await this.ensureConversationExists(conversationId);
     const messages = await this.messageModel.find({ conversationId }).sort({ timestamp: 1 }).lean();

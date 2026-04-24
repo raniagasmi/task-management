@@ -154,6 +154,22 @@ class CollaborationService {
     }
   }
 
+  async getAllConversations(): Promise<CollaborationConversation[]> {
+    try {
+      const response = await api.get<CollaborationConversation[]>(
+        API_ENDPOINTS.COLLABORATION.ALL_CONVERSATIONS,
+      );
+
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(`Failed to load conversations: ${error.message}`);
+      }
+
+      throw error;
+    }
+  }
+
   async getMessages(conversationId: string): Promise<CollaborationMessage[]> {
     try {
       const response = await api.get<CollaborationMessage[]>(

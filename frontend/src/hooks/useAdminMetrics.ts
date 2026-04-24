@@ -4,6 +4,7 @@ import { adminAnalyticsService } from '../services/admin-analytics.service';
 import { taskService } from '../services/task.service';
 import { userService } from '../services/user.service';
 import { collaborationSocket } from '../services/collaboration.socket';
+import { collaborationService } from '../services/collaboration.service';
 import {
   EmployeeMetrics,
   AdminDashboardData,
@@ -192,6 +193,16 @@ export const useProjectMetrics = (shouldLoad: boolean = false) => {
           taskService.getAllTasks(),
         ]);
 
+        const conversations = await collaborationService.getAllConversations().catch(() => []);
+        const projectNamesById = new Map(
+          conversations
+            .map((conversation) => {
+              const conversationId = conversation.id ?? conversation._id ?? '';
+              return [conversationId, conversation.title] as const;
+            })
+            .filter(([conversationId]) => Boolean(conversationId))
+        );
+
         const projectMap = new Map<string, Task[]>();
         allTasks.forEach((task) => {
           const projectId = task.conversationId || 'default-project';
@@ -202,7 +213,12 @@ export const useProjectMetrics = (shouldLoad: boolean = false) => {
         });
 
         const metrics = Array.from(projectMap.entries()).map(([projectId, tasks]) =>
-          adminAnalyticsService.calculateProjectMetrics(projectId, tasks, allUsers)
+          adminAnalyticsService.calculateProjectMetrics(
+            projectId,
+            tasks,
+            allUsers,
+            projectNamesById.get(projectId)
+          )
         );
 
         setProjects(metrics);

@@ -31,6 +31,7 @@ export const API_ENDPOINTS = {
   COLLABORATION: {
     BASE: '/collaboration',
     CONVERSATIONS: '/collaboration/conversations',
+    ALL_CONVERSATIONS: '/collaboration/conversations',
     CONVERSATIONS_BY_USER: (userId: string) => `/collaboration/conversations/user/${userId}`,
     MESSAGES: (conversationId: string) => `/collaboration/conversations/${conversationId}/messages`,
     AI_DECOMPOSE: (conversationId: string) => `/collaboration/conversations/${conversationId}/ai-decompose`,

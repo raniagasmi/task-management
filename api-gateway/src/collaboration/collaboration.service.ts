@@ -60,6 +60,10 @@ export class CollaborationService {
     return this.forwardGet(`/collaboration/conversations/user/${userId}`);
   }
 
+  async getAllConversations() {
+    return this.forwardGet('/collaboration/conversations');
+  }
+
   async getMessages(conversationId: string) {
     return this.forwardGet(`/collaboration/conversations/${conversationId}/messages`);
   }
