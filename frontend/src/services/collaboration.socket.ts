@@ -24,6 +24,15 @@ type PresencePayload = {
   updatedAt: string | null;
 };
 
+type TaskReminderPayload = {
+  userId: string;
+  reminderId: string;
+  taskId: string;
+  taskTitle: string;
+  remindAt: string;
+  taskDueDate: string | null;
+};
+
 class CollaborationSocketService {
   private socket: Socket | null = null;
   private registeredUserId = '';
@@ -192,6 +201,15 @@ class CollaborationSocketService {
 
     return () => {
       socket.off('presence:updated', handler);
+    };
+  }
+
+  onTaskReminder(handler: (payload: TaskReminderPayload) => void) {
+    const socket = this.connect();
+    socket.on('task:reminder', handler);
+
+    return () => {
+      socket.off('task:reminder', handler);
     };
   }
 }

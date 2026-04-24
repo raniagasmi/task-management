@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Task, TaskStatus } from '../entities/task.entity';
+import { TaskReminder } from '../entities/task-reminder.entity';
 import { CreateTaskBatchDto, CreateTaskDto, UpdateTaskDto } from '../dto/task.dto';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -15,6 +16,8 @@ export class TaskService {
   constructor(
     @InjectRepository(Task)
     private taskRepository: Repository<Task>,
+    @InjectRepository(TaskReminder)
+    private reminderRepository: Repository<TaskReminder>,
   ) {}
 
   private convertMongoIdToUuid(mongoId: string): string {
@@ -125,5 +128,62 @@ export class TaskService {
     task.active = !task.active;
     task.updatedAt = new Date();
     return this.taskRepository.save(task);
+  }
+
+  async createReminder(taskId: string, userId: string, remindAt: string | Date) {
+    const task = await this.findOne(taskId);
+
+    const parsed = remindAt instanceof Date ? remindAt : new Date(remindAt);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new BadRequestException('Invalid remindAt date');
+    }
+
+    const reminder = this.reminderRepository.create({
+      taskId: task.id,
+      userId,
+      remindAt: parsed,
+      sentAt: null,
+      taskTitle: task.title,
+      taskDueDate: task.dueDate ? new Date(task.dueDate) : null,
+    });
+
+    return this.reminderRepository.save(reminder);
+  }
+
+  async listRemindersForUser(userId: string) {
+    return this.reminderRepository.find({
+      where: { userId },
+      order: { remindAt: 'ASC' },
+    });
+  }
+
+  async findDueReminders(now: string | Date) {
+    const parsed = now instanceof Date ? now : new Date(now);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new BadRequestException('Invalid now date');
+    }
+
+    return this.reminderRepository
+      .createQueryBuilder('r')
+      .where('r.sentAt IS NULL')
+      .andWhere('r.remindAt <= :now', { now: parsed.toISOString() })
+      .orderBy('r.remindAt', 'ASC')
+      .limit(50)
+      .getMany();
+  }
+
+  async markReminderSent(id: string, sentAt: string | Date) {
+    const parsed = sentAt instanceof Date ? sentAt : new Date(sentAt);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new BadRequestException('Invalid sentAt date');
+    }
+
+    const existing = await this.reminderRepository.findOne({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException(`Reminder with ID ${id} not found`);
+    }
+
+    existing.sentAt = parsed;
+    return this.reminderRepository.save(existing);
   }
 }

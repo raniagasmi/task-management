@@ -423,6 +423,39 @@ export const Board: React.FC<BoardProps> = ({ showControls = true }) => {
     }
   };
 
+  const handleQuickReminder = async () => {
+    if (!currentTask?.id) {
+      toast({
+        title: "Save the task first",
+        description: "Reminders can only be scheduled for existing tasks.",
+        status: "warning",
+        duration: 3500,
+        isClosable: true,
+      });
+      return;
+    }
+
+    try {
+      const remindAt = new Date(Date.now() + 60_000);
+      await taskService.createTaskReminder(currentTask.id, remindAt);
+      toast({
+        title: "Reminder scheduled",
+        description: "You'll get a notification in about 1 minute.",
+        status: "success",
+        duration: 3500,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to schedule reminder",
+        description: error instanceof Error ? error.message : "An error occurred",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
   if (loading) {
     return <Box p={4}>Loading tasks...</Box>;
   }
@@ -585,6 +618,10 @@ export const Board: React.FC<BoardProps> = ({ showControls = true }) => {
                 placeholder="Due Date"
                 width="100%"
               />
+
+              <Button variant="outline" size="sm" onClick={handleQuickReminder}>
+                Remind me in 1 minute
+              </Button>
 
             </VStack>
           </ModalBody>

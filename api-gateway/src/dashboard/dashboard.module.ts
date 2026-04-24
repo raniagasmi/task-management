@@ -1,17 +1,14 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { TaskController } from './task.controller';
-import { TaskService } from './task.service';
 import { AuthModule } from '../auth/auth.module';
 import { CollaborationModule } from '../collaboration/collaboration.module';
-import { TaskReminderScheduler } from './task-reminder.scheduler';
-import { UserModule } from '../user/user.module';
+import { DashboardController } from './dashboard.controller';
+import { DashboardService } from './dashboard.service';
 
 @Module({
   imports: [
     AuthModule,
     CollaborationModule,
-    UserModule,
     ClientsModule.register([
       {
         name: 'TASK_SERVICE',
@@ -23,7 +20,8 @@ import { UserModule } from '../user/user.module';
       },
     ]),
   ],
-  controllers: [TaskController],
-  providers: [TaskService, TaskReminderScheduler],
+  controllers: [DashboardController],
+  providers: [DashboardService],
 })
-export class TaskModule {}
+export class DashboardModule {}
+

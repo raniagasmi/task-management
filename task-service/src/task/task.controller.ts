@@ -24,7 +24,8 @@ export class TaskController {
   }
 
   @MessagePattern({ cmd: 'findOneTask' })
-  findOne(@Payload() id: string) {
+  findOne(@Payload() payload: string | { id: string }) {
+    const id = typeof payload === 'string' ? payload : payload?.id;
     return this.taskService.findOne(id);
   }
 
@@ -55,7 +56,29 @@ export class TaskController {
   }
 
   @MessagePattern({ cmd: 'getTasksByAssignee' })
-  getTasksByAssignee(@Payload() userId: string) {
+  getTasksByAssignee(@Payload() payload: string | { userId: string }) {
+    const userId = typeof payload === 'string' ? payload : payload?.userId;
     return this.taskService.getTasksByAssignee(userId);
+  }
+
+  @MessagePattern({ cmd: 'createTaskReminder' })
+  createReminder(@Payload() payload: { taskId: string; userId: string; remindAt: string }) {
+    return this.taskService.createReminder(payload.taskId, payload.userId, payload.remindAt);
+  }
+
+  @MessagePattern({ cmd: 'listTaskRemindersByUser' })
+  listReminders(@Payload() payload: string | { userId: string }) {
+    const userId = typeof payload === 'string' ? payload : payload?.userId;
+    return this.taskService.listRemindersForUser(userId);
+  }
+
+  @MessagePattern({ cmd: 'findDueTaskReminders' })
+  findDueReminders(@Payload() payload: { now: string }) {
+    return this.taskService.findDueReminders(payload.now);
+  }
+
+  @MessagePattern({ cmd: 'markTaskReminderSent' })
+  markSent(@Payload() payload: { id: string; sentAt: string }) {
+    return this.taskService.markReminderSent(payload.id, payload.sentAt);
   }
 }

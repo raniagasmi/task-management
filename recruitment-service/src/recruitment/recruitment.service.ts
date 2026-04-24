@@ -16,6 +16,7 @@ import {
 	parseJobOfferResponse,
 } from '../common/parser/parse-job-offer.parser';
 import { AiService } from './ai.service';
+import { CopilotThread, CopilotThreadDocument } from './schemas/copilot-thread.schema';
 import { JobOffer, JobOfferDocument } from './schemas/job-offer.schema';
 
 export interface GeneratedJobOffer extends ParsedJobOffer {
@@ -68,7 +69,74 @@ export class RecruitmentService {
 		private readonly aiService: AiService,
 		@InjectModel(JobOffer.name)
 		private readonly jobOfferModel: Model<JobOfferDocument>,
+		@InjectModel(CopilotThread.name)
+		private readonly copilotThreadModel: Model<CopilotThreadDocument>,
 	) {}
+
+	async getCopilotHistory(userId: string) {
+		const normalized = userId.trim();
+		if (!normalized) {
+			throw new BadRequestException('userId must not be empty.');
+		}
+
+		const thread = await this.copilotThreadModel.findOne({ userId: normalized }).lean();
+		const messages = (thread?.messages ?? []).map((message: any) => ({
+			id: message?._id?.toString?.() ?? '',
+			role: message.role,
+			content: message.content,
+			createdAt: message.createdAt ? new Date(message.createdAt).toISOString() : null,
+		}));
+
+		return { userId: normalized, messages };
+	}
+
+	async appendCopilotMessage(userId: string, role: 'user' | 'assistant', content: string) {
+		const normalizedUserId = userId.trim();
+		const normalizedContent = content.trim();
+		if (!normalizedUserId) {
+			throw new BadRequestException('userId must not be empty.');
+		}
+		if (!normalizedContent) {
+			throw new BadRequestException('content must not be empty.');
+		}
+
+		const updated = await this.copilotThreadModel.findOneAndUpdate(
+			{ userId: normalizedUserId },
+			{
+				$push: {
+					messages: {
+						role,
+						content: normalizedContent,
+						createdAt: new Date(),
+					},
+				},
+			},
+			{ upsert: true, new: true },
+		);
+
+		const last = updated?.messages?.[updated.messages.length - 1] as any;
+		return {
+			ok: true,
+			message: last
+				? {
+						id: last?._id?.toString?.() ?? '',
+						role: last.role,
+						content: last.content,
+						createdAt: last.createdAt ? new Date(last.createdAt).toISOString() : null,
+				  }
+				: null,
+		};
+	}
+
+	async resetCopilotHistory(userId: string) {
+		const normalized = userId.trim();
+		if (!normalized) {
+			throw new BadRequestException('userId must not be empty.');
+		}
+
+		await this.copilotThreadModel.deleteOne({ userId: normalized });
+		return { ok: true };
+	}
 
 	async generateJobOffer(userPrompt: string): Promise<GeneratedJobOffer> {
 		const prompt = buildJobOfferPrompt(userPrompt);

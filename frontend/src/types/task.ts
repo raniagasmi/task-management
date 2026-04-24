@@ -17,6 +17,10 @@ export interface Task {
   status: TaskStatus;
   priority: TaskPriority;
   assignedTo: string;
+  assignedToUser?: {
+    firstName: string;
+    lastName: string;
+  };
   createdBy: string;
   order: number;
   conversationId?: string;

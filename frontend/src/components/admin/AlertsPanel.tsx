@@ -113,7 +113,7 @@ const AlertItem: React.FC<{ alert: Alert; onResolve?: (alert: Alert) => void }> 
             </Text>
           </VStack>
         </HStack>
-        {!alert.isResolved && (
+        {!alert.isResolved && onResolve && (
           <Button
             size="xs"
             colorScheme="gray"

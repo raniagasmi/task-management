@@ -35,7 +35,21 @@ export type ChatResponse =
 			isComplete: true;
 			jobOffer: JobOffer;
 			collectedData: ChatCollectedData;
-		};
+	};
+
+export type CopilotMessageRole = 'user' | 'assistant';
+
+export interface CopilotMessage {
+  id: string;
+  role: CopilotMessageRole;
+  content: string;
+  createdAt: string | null;
+}
+
+export interface CopilotHistoryResponse {
+  userId: string;
+  messages: CopilotMessage[];
+}
 
 class RecruitmentService {
 	private buildAxiosErrorMessage(prefix: string, error: unknown): Error {
@@ -83,6 +97,36 @@ class RecruitmentService {
 			throw this.buildAxiosErrorMessage('Failed to generate LinkedIn post', error);
 		}
 	}
+
+  async getCopilotHistory(): Promise<CopilotHistoryResponse> {
+    try {
+      const response = await api.get<CopilotHistoryResponse>(API_ENDPOINTS.RECRUITMENT.COPILOT_HISTORY);
+      return response.data;
+    } catch (error) {
+      throw this.buildAxiosErrorMessage('Failed to load copilot history', error);
+    }
+  }
+
+  async appendCopilotMessage(role: CopilotMessageRole, content: string): Promise<{ ok: true; message: CopilotMessage | null }> {
+    try {
+      const response = await api.post<{ ok: true; message: CopilotMessage | null }>(
+        API_ENDPOINTS.RECRUITMENT.COPILOT_MESSAGE,
+        { role, content },
+      );
+      return response.data;
+    } catch (error) {
+      throw this.buildAxiosErrorMessage('Failed to persist copilot message', error);
+    }
+  }
+
+  async resetCopilotHistory(): Promise<{ ok: true }> {
+    try {
+      const response = await api.post<{ ok: true }>(API_ENDPOINTS.RECRUITMENT.COPILOT_RESET);
+      return response.data;
+    } catch (error) {
+      throw this.buildAxiosErrorMessage('Failed to reset copilot history', error);
+    }
+  }
 }
 
 export const recruitmentService = new RecruitmentService();

@@ -47,6 +47,11 @@ const Task: React.FC<TaskProps> = ({ task }) => {
     HIGH: "red",
   };
 
+  const assigneeName = task.assignedToUser
+    ? `${task.assignedToUser.firstName ?? ""} ${task.assignedToUser.lastName ?? ""}`.trim()
+    : "";
+  const assigneeLabel = assigneeName || (task.assignedTo ? "Unknown Employee" : "Unassigned");
+
 
   return (
     <Box
@@ -94,8 +99,8 @@ const Task: React.FC<TaskProps> = ({ task }) => {
                   </Tooltip>
                 )}
               </Flex>
-              <Tooltip label={`Assigned to: ${task.assignedTo}`}>
-                <Avatar name={task.assignedTo} size="xs" />
+              <Tooltip label={`Assigned to: ${assigneeLabel}`}>
+                <Avatar name={assigneeLabel} size="xs" />
               </Tooltip>
             </Flex>
           </VStack>

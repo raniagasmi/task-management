@@ -20,6 +20,8 @@ export const API_ENDPOINTS = {
     STATUS: (id: string) => `/tasks/${id}/status`,
     ORDER: (id: string) => `/tasks/${id}/order`,
     ACTIVE: (id: string) => `/tasks/${id}/active`,
+    REMINDERS_ME: '/tasks/reminders/me',
+    REMINDERS_CREATE: (id: string) => `/tasks/${id}/reminders`,
     BATCH_UPDATE_ORDERS: '/tasks/batch-update-orders',
   },
   RECRUITMENT: {
@@ -27,6 +29,12 @@ export const API_ENDPOINTS = {
     GENERATE: '/api/recruitment/generate',
     CHAT: '/api/recruitment/chat',
     LINKEDIN: '/api/recruitment/linkedin-post',
+    COPILOT_HISTORY: '/api/recruitment/copilot/history',
+    COPILOT_MESSAGE: '/api/recruitment/copilot/message',
+    COPILOT_RESET: '/api/recruitment/copilot/reset',
+  },
+  DASHBOARD: {
+    ME: '/dashboard/me',
   },
   COLLABORATION: {
     BASE: '/collaboration',

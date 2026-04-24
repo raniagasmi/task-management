@@ -15,10 +15,13 @@ export class UserService {
   }
 
   async findById(id: string) {
-    console.log('Finding user by ID:', id);
-    return firstValueFrom(
-      this.userServiceClient.send({ cmd: 'get_user' }, { userId: id }),
-    );
+    try {
+      return await firstValueFrom(
+        this.userServiceClient.send({ cmd: 'get_user' }, { userId: id }),
+      );
+    } catch {
+      return null;
+    }
   }
 
   async delete(id: string) {

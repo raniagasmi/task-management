@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, UseGuards, ForbiddenException } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -38,8 +38,22 @@ export class CollaborationController {
     return response;
   }
 
+  @Get('conversations/me')
+  async getMyConversations(@Req() req: { user: { userId?: string } }) {
+    return this.collaborationService.getConversationsForUser(req.user?.userId ?? '');
+  }
+
   @Get('conversations/user/:userId')
-  async getConversationsForUser(@Param('userId') userId: string) {
+  async getConversationsForUser(
+    @Param('userId') userId: string,
+    @Req() req: { user: { userId?: string; role?: string } },
+  ) {
+    const requesterRole = (req.user?.role ?? '').toLowerCase();
+    const requesterId = req.user?.userId ?? '';
+    if (requesterRole !== 'admin' && requesterId !== userId) {
+      throw new ForbiddenException('Access denied');
+    }
+
     return this.collaborationService.getConversationsForUser(userId);
   }
 

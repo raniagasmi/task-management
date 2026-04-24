@@ -126,6 +126,17 @@ export class CollaborationGateway implements OnGatewayDisconnect {
     this.emitToConversationRoom(payload, 'task:created');
   }
 
+  emitTaskReminder(payload: {
+    userId: string;
+    reminderId: string;
+    taskId: string;
+    taskTitle: string;
+    remindAt: string;
+    taskDueDate: string | null;
+  }) {
+    this.server?.to(this.userRoom(payload.userId)).emit('task:reminder', payload);
+  }
+
   emitPresenceUpdated(payload: { userId: string; status: string; lastActiveAt: string | null; updatedAt: string | null }) {
     this.server?.emit('presence:updated', payload);
   }

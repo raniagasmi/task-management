@@ -13,6 +13,8 @@ import SideNavbar from '../layout/SideNavbar';
 import Board from '../tasks/Board';
 import { AdminDashboard } from '../admin/AdminDashboard';
 import { UserRole } from '../../types/user';
+import { EmployeeDashboard } from '../employee/EmployeeDashboard';
+import { TaskReminderToasts } from '../notifications/TaskReminderToasts';
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -59,10 +61,11 @@ const HomePage = () => {
           {isAdmin ? (
             <AdminDashboard isAdmin={true} />
           ) : (
-            <Board />
+            <EmployeeDashboard />
           )}
         </Box>
       </Flex>
+      <TaskReminderToasts />
       <ThemeSelector />
     </Flex>
   );

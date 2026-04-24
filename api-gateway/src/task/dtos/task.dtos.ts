@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsNumber,
   IsEnum,
+  IsISO8601,
 } from 'class-validator';
 
 export enum TaskStatus {
@@ -86,4 +87,10 @@ export class UpdateTaskOrderDto {
   @IsNumber()
   @IsNotEmpty()
   order!: number;
+}
+
+export class CreateTaskReminderDto {
+  @IsISO8601()
+  @IsNotEmpty()
+  remindAt!: string;
 }

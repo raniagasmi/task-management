@@ -6,6 +6,7 @@ import { CollaborationModule } from './collaboration/collaboration.module';
 import { RecruitmentModule } from './recruitment/recruitment.module';
 import { TaskModule } from './task/task.module';
 import { UserModule } from './user/user.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { UserModule } from './user/user.module';
     RecruitmentModule,
     TaskModule,
     UserModule,
+    DashboardModule,
   ],
   providers: [],
 })

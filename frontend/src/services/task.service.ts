@@ -69,7 +69,7 @@ class TaskService {
 
   async updateTask(id: string, taskData: UpdateTaskDto): Promise<Task> {
     try {
-      const response = await api.patch<Task>(API_ENDPOINTS.TASKS.BY_ID(id), taskData);
+      const response = await api.put<Task>(API_ENDPOINTS.TASKS.BY_ID(id), taskData);
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -150,6 +150,34 @@ class TaskService {
     } catch (error) {
       if (axios.isAxiosError(error)) {
         throw new Error(`Failed to fetch tasks for user ${userId}: ${error.message}`);
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  async createTaskReminder(taskId: string, remindAt: Date): Promise<any> {
+    try {
+      const response = await api.post(API_ENDPOINTS.TASKS.REMINDERS_CREATE(taskId), {
+        remindAt: remindAt.toISOString(),
+      });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(`Failed to create reminder: ${error.message}`);
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  async listMyReminders(): Promise<any[]> {
+    try {
+      const response = await api.get<any[]>(API_ENDPOINTS.TASKS.REMINDERS_ME);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(`Failed to load reminders: ${error.message}`);
       } else {
         throw error;
       }

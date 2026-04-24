@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
 	Badge,
 	Box,
@@ -15,7 +15,7 @@ import {
 	UnorderedList,
 	useToast,
 } from '@chakra-ui/react';
-import { JobOffer, recruitmentService } from '../../services/recruitment.service';
+import { CopilotMessageRole, JobOffer, recruitmentService } from '../../services/recruitment.service';
 import SideNavbar from '../layout/SideNavbar';
 import { authService } from '../../services/auth.service';
 import { useNavigate } from 'react-router-dom';
@@ -28,7 +28,7 @@ type RecruitmentFlowState =
 	| 'generating_post'
 	| 'done';
 
-type MessageRole = 'user' | 'assistant';
+type MessageRole = CopilotMessageRole;
 
 interface ChatMessage {
 	id: string;
@@ -55,6 +55,36 @@ const RecruitmentPage = () => {
 	]);
 	const toast = useToast();
 
+	useEffect(() => {
+		let cancelled = false;
+
+		(async () => {
+			try {
+				const history = await recruitmentService.getCopilotHistory();
+				if (cancelled) {
+					return;
+				}
+
+				if (history.messages && history.messages.length > 0) {
+					setMessages(
+						history.messages.map((message) => ({
+							id: message.id || createMessageId(),
+							role: message.role,
+							content: message.content,
+						})),
+					);
+				}
+			} catch (error) {
+				// Persistence should not block the UI if the backend is temporarily unavailable.
+				console.warn('Failed to hydrate copilot history:', error);
+			}
+		})();
+
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+
 	const handleLogout = () => {
 		authService.logout();
 		navigate('/login');
@@ -69,7 +99,17 @@ const RecruitmentPage = () => {
 	}, []);
 
 	const appendMessage = (role: MessageRole, content: string) => {
-		setMessages((prev) => [...prev, { id: createMessageId(), role, content }]);
+		const normalized = content.trim();
+		if (!normalized) {
+			return;
+		}
+
+		setMessages((prev) => [...prev, { id: createMessageId(), role, content: normalized }]);
+
+		// Persist in the background; the UI state is the source of truth for the current session.
+		void recruitmentService.appendCopilotMessage(role, normalized).catch((error) => {
+			console.warn('Failed to persist copilot message:', error);
+		});
 	};
 
 	const resolveJobOfferId = (offer: JobOffer) => offer.id ?? offer._id ?? offer.jobOfferId ?? '';

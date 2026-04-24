@@ -24,6 +24,19 @@ export class RecruitmentService {
     return this.forwardPost('/recruitment/linkedin-post', body);
   }
 
+  async getCopilotHistory(userId: string) {
+    const encoded = encodeURIComponent(userId);
+    return this.forwardGet(`/recruitment/copilot/history?userId=${encoded}`);
+  }
+
+  async appendCopilotMessage(body: { userId: string; role: 'user' | 'assistant'; content: string }) {
+    return this.forwardPost('/recruitment/copilot/message', body);
+  }
+
+  async resetCopilotHistory(userId: string) {
+    return this.forwardPost('/recruitment/copilot/reset', { userId });
+  }
+
   private async forwardGet(path: string) {
     return this.forward('GET', path);
   }
