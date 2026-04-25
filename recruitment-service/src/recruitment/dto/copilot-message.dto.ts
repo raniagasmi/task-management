@@ -6,6 +6,10 @@ export class CopilotAppendMessageDto {
   userId!: string;
 
   @IsString()
+  @IsNotEmpty()
+  threadId!: string;
+
+  @IsString()
   @IsIn(['user', 'assistant'])
   role!: 'user' | 'assistant';
 
@@ -13,4 +17,3 @@ export class CopilotAppendMessageDto {
   @IsNotEmpty()
   content!: string;
 }
-

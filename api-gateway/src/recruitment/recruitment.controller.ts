@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, UseGuards, UnauthorizedException } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RecruitmentService } from './recruitment.service';
 
@@ -37,9 +37,36 @@ export class RecruitmentController {
     return this.recruitmentService.getCopilotHistory(userId);
   }
 
+  @Get('copilot/threads')
+  async copilotThreads(@Req() req: { user: { userId?: string } }) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    return this.recruitmentService.listCopilotThreads(userId);
+  }
+
+  @Get('copilot/threads/:threadId')
+  async copilotThread(@Req() req: { user: { userId?: string } }, @Param('threadId') threadId: string) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    return this.recruitmentService.getCopilotThread(userId, threadId);
+  }
+
+  @Post('copilot/threads')
+  async createCopilotThread(@Req() req: { user: { userId?: string } }) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    return this.recruitmentService.createCopilotThread(userId);
+  }
+
   @Post('copilot/message')
   async copilotMessage(
-    @Body() body: { role: 'user' | 'assistant'; content: string },
+    @Body() body: { threadId: string; role: 'user' | 'assistant'; content: string },
     @Req() req: { user: { userId?: string } },
   ) {
     const userId = req.user?.userId;
@@ -49,18 +76,70 @@ export class RecruitmentController {
 
     return this.recruitmentService.appendCopilotMessage({
       userId,
+      threadId: body.threadId,
       role: body.role,
       content: body.content,
     });
   }
 
-  @Post('copilot/reset')
-  async copilotReset(@Req() req: { user: { userId?: string } }) {
+  @Post('copilot/threads/:threadId/archive')
+  async archiveCopilotThread(
+    @Req() req: { user: { userId?: string } },
+    @Param('threadId') threadId: string,
+    @Body() body: { isArchived: boolean },
+  ) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    return this.recruitmentService.updateCopilotThread({
+      userId,
+      threadId,
+      isArchived: body.isArchived,
+    });
+  }
+
+  @Post('copilot/threads/:threadId/mute')
+  async muteCopilotThread(
+    @Req() req: { user: { userId?: string } },
+    @Param('threadId') threadId: string,
+    @Body() body: { isMuted: boolean },
+  ) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    return this.recruitmentService.updateCopilotThread({
+      userId,
+      threadId,
+      isMuted: body.isMuted,
+    });
+  }
+
+  @Post('copilot/threads/:threadId/delete')
+  async deleteCopilotThread(@Req() req: { user: { userId?: string } }, @Param('threadId') threadId: string) {
     const userId = req.user?.userId;
     if (!userId) {
       throw new UnauthorizedException('User not authenticated');
     }
 
-    return this.recruitmentService.resetCopilotHistory(userId);
+    return this.recruitmentService.updateCopilotThread({
+      userId,
+      threadId,
+      isDeleted: true,
+    });
+  }
+
+  @Post('copilot/reset')
+  async copilotReset(
+    @Req() req: { user: { userId?: string } },
+    @Body() body: { threadId?: string },
+  ) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
+    return this.recruitmentService.resetCopilotHistory(userId, body.threadId);
   }
 }

@@ -6,10 +6,12 @@ import {
 	InternalServerErrorException,
 	Logger,
 	NotFoundException,
+	OnModuleInit,
 	UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { isValidObjectId, Model } from 'mongoose';
+import { randomUUID } from 'crypto';
 import { buildJobOfferPrompt } from '../common/prompt/build-job-offer.prompt';
 import {
 	JobOffer as ParsedJobOffer,
@@ -61,7 +63,7 @@ export type ChatResponse =
 	  };
 
 @Injectable()
-export class RecruitmentService {
+export class RecruitmentService implements OnModuleInit {
 	private readonly logger = new Logger(RecruitmentService.name);
 	private readonly chatStates = new Map<string, ChatState>();
 
@@ -73,35 +75,161 @@ export class RecruitmentService {
 		private readonly copilotThreadModel: Model<CopilotThreadDocument>,
 	) {}
 
+	async onModuleInit() {
+		await this.ensureCopilotThreadIndexes();
+	}
+
 	async getCopilotHistory(userId: string) {
 		const normalized = userId.trim();
 		if (!normalized) {
 			throw new BadRequestException('userId must not be empty.');
 		}
-
-		const thread = await this.copilotThreadModel.findOne({ userId: normalized }).lean();
-		const messages = (thread?.messages ?? []).map((message: any) => ({
-			id: message?._id?.toString?.() ?? '',
-			role: message.role,
-			content: message.content,
-			createdAt: message.createdAt ? new Date(message.createdAt).toISOString() : null,
-		}));
-
-		return { userId: normalized, messages };
+		const latestThread = await this.copilotThreadModel
+			.findOne({ userId: normalized, isDeleted: { $ne: true } })
+			.sort({ updatedAt: -1 })
+			.lean();
+		if (!latestThread) {
+			return { userId: normalized, messages: [] };
+		}
+		return this.getCopilotThread(normalized, latestThread.threadId);
 	}
 
-	async appendCopilotMessage(userId: string, role: 'user' | 'assistant', content: string) {
+	async listCopilotThreads(userId: string) {
+		const normalized = userId.trim();
+		if (!normalized) {
+			throw new BadRequestException('userId must not be empty.');
+		}
+
+		const threads = await this.copilotThreadModel
+			.find({ userId: normalized, isDeleted: { $ne: true } })
+			.sort({ updatedAt: -1 });
+
+		await Promise.all(threads.map((thread) => this.ensureCopilotThreadIntegrity(thread)));
+
+		return {
+			userId: normalized,
+			threads: threads.map((thread) => {
+				const updatedAt = (thread as CopilotThreadDocument & { updatedAt?: Date }).updatedAt;
+				const lastMessage = Array.isArray(thread.messages)
+					? thread.messages[thread.messages.length - 1]
+					: undefined;
+
+				return {
+					threadId: thread.threadId,
+					title: thread.title || 'New recruitment chat',
+					firstPrompt: thread.firstPrompt || '',
+					isArchived: !!thread.isArchived,
+					isMuted: !!thread.isMuted,
+					updatedAt: updatedAt ? new Date(updatedAt).toISOString() : null,
+					lastMessagePreview: String(lastMessage?.content ?? '').slice(0, 120),
+				};
+			}),
+		};
+	}
+
+	async createCopilotThread(userId: string) {
+		const normalized = userId.trim();
+		if (!normalized) {
+			throw new BadRequestException('userId must not be empty.');
+		}
+
+		const threadId = randomUUID();
+		try {
+			await this.copilotThreadModel.create({
+				userId: normalized,
+				threadId,
+				title: 'New recruitment chat',
+				firstPrompt: '',
+				isArchived: false,
+				isMuted: false,
+				isDeleted: false,
+				messages: [],
+			});
+		} catch (error) {
+			if (this.isDuplicateUserIndexError(error)) {
+				this.logger.warn('Detected stale unique userId index on copilot_threads. Repairing indexes and retrying.');
+				await this.ensureCopilotThreadIndexes(true);
+				await this.copilotThreadModel.create({
+					userId: normalized,
+					threadId,
+					title: 'New recruitment chat',
+					firstPrompt: '',
+					isArchived: false,
+					isMuted: false,
+					isDeleted: false,
+					messages: [],
+				});
+			} else {
+				throw error;
+			}
+		}
+
+		return this.getCopilotThread(normalized, threadId);
+	}
+
+	async getCopilotThread(userId: string, threadId: string) {
 		const normalizedUserId = userId.trim();
+		const normalizedThreadId = threadId.trim();
+		if (!normalizedUserId || !normalizedThreadId) {
+			throw new BadRequestException('userId and threadId are required.');
+		}
+
+		const thread = await this.copilotThreadModel
+			.findOne({
+				userId: normalizedUserId,
+				threadId: normalizedThreadId,
+				isDeleted: { $ne: true },
+			});
+		if (!thread) {
+			throw new NotFoundException('Copilot thread not found.');
+		}
+		await this.ensureCopilotThreadIntegrity(thread);
+
+		return {
+			userId: normalizedUserId,
+			threadId: normalizedThreadId,
+			title: thread.title || 'New recruitment chat',
+			firstPrompt: thread.firstPrompt || '',
+			isArchived: !!thread.isArchived,
+			isMuted: !!thread.isMuted,
+			messages: (thread.messages ?? []).map((message: any) => ({
+				id: message?._id?.toString?.() ?? '',
+				role: message.role,
+				content: message.content,
+				createdAt: message.createdAt ? new Date(message.createdAt).toISOString() : null,
+			})),
+		};
+	}
+
+	async appendCopilotMessage(userId: string, threadId: string, role: 'user' | 'assistant', content: string) {
+		const normalizedUserId = userId.trim();
+		const normalizedThreadId = threadId.trim();
 		const normalizedContent = content.trim();
 		if (!normalizedUserId) {
 			throw new BadRequestException('userId must not be empty.');
+		}
+		if (!normalizedThreadId) {
+			throw new BadRequestException('threadId must not be empty.');
 		}
 		if (!normalizedContent) {
 			throw new BadRequestException('content must not be empty.');
 		}
 
+		const existing = await this.copilotThreadModel.findOne({
+			userId: normalizedUserId,
+			threadId: normalizedThreadId,
+			isDeleted: { $ne: true },
+		});
+		if (!existing) {
+			throw new NotFoundException('Copilot thread not found.');
+		}
+		await this.ensureCopilotThreadIntegrity(existing);
+
+		const shouldCaptureFirstPrompt = role === 'user' && !existing.firstPrompt;
+		const computedTitle = shouldCaptureFirstPrompt ? this.buildCopilotTitle(normalizedContent) : existing.title;
+
 		const updated = await this.copilotThreadModel.findOneAndUpdate(
-			{ userId: normalizedUserId },
+			{ userId: normalizedUserId, threadId: normalizedThreadId },
 			{
 				$push: {
 					messages: {
@@ -110,8 +238,11 @@ export class RecruitmentService {
 						createdAt: new Date(),
 					},
 				},
+				...(shouldCaptureFirstPrompt
+					? { $set: { firstPrompt: normalizedContent, title: computedTitle } }
+					: {}),
 			},
-			{ upsert: true, new: true },
+			{ upsert: false, new: true },
 		);
 
 		const last = updated?.messages?.[updated.messages.length - 1] as any;
@@ -128,14 +259,137 @@ export class RecruitmentService {
 		};
 	}
 
-	async resetCopilotHistory(userId: string) {
+	async updateCopilotThread(
+		userId: string,
+		threadId: string,
+		input: { isArchived?: boolean; isMuted?: boolean; isDeleted?: boolean },
+	) {
+		const normalizedUserId = userId.trim();
+		const normalizedThreadId = threadId.trim();
+		if (!normalizedUserId || !normalizedThreadId) {
+			throw new BadRequestException('userId and threadId are required.');
+		}
+
+		const patch: Record<string, boolean> = {};
+		if (typeof input.isArchived === 'boolean') patch.isArchived = input.isArchived;
+		if (typeof input.isMuted === 'boolean') patch.isMuted = input.isMuted;
+		if (typeof input.isDeleted === 'boolean') patch.isDeleted = input.isDeleted;
+		if (Object.keys(patch).length === 0) {
+			throw new BadRequestException('No thread property was provided.');
+		}
+
+		const updated = await this.copilotThreadModel.findOneAndUpdate(
+			{ userId: normalizedUserId, threadId: normalizedThreadId },
+			{ $set: patch },
+			{ new: true },
+		);
+		if (!updated) {
+			throw new NotFoundException('Copilot thread not found.');
+		}
+		return {
+			ok: true,
+			threadId: updated.threadId,
+			isArchived: updated.isArchived,
+			isMuted: updated.isMuted,
+			isDeleted: updated.isDeleted,
+		};
+	}
+
+	async resetCopilotHistory(userId: string, threadId?: string) {
 		const normalized = userId.trim();
 		if (!normalized) {
 			throw new BadRequestException('userId must not be empty.');
 		}
 
-		await this.copilotThreadModel.deleteOne({ userId: normalized });
+		if (threadId?.trim()) {
+			await this.copilotThreadModel.updateOne(
+				{ userId: normalized, threadId: threadId.trim() },
+				{ $set: { isDeleted: true } },
+			);
+			return { ok: true };
+		}
+
+		await this.copilotThreadModel.updateMany(
+			{ userId: normalized, isDeleted: { $ne: true } },
+			{ $set: { isDeleted: true } },
+		);
 		return { ok: true };
+	}
+
+	private buildCopilotTitle(firstPrompt: string) {
+		const compact = firstPrompt.replace(/\s+/g, ' ').trim();
+		if (!compact) {
+			return 'New recruitment chat';
+		}
+		if (compact.length <= 60) {
+			return compact;
+		}
+		return `${compact.slice(0, 57)}...`;
+	}
+
+	private async ensureCopilotThreadIntegrity(thread: CopilotThreadDocument) {
+		let changed = false;
+
+		if (!thread.threadId?.trim()) {
+			thread.threadId = randomUUID();
+			changed = true;
+		}
+
+		if (!Array.isArray(thread.messages)) {
+			thread.messages = [] as any;
+			changed = true;
+		}
+
+		const firstUserMessage = thread.messages.find((message) => message?.role === 'user' && message?.content?.trim());
+		const normalizedFirstPrompt = firstUserMessage?.content?.trim() ?? '';
+
+		if (!thread.firstPrompt?.trim() && normalizedFirstPrompt) {
+			thread.firstPrompt = normalizedFirstPrompt;
+			changed = true;
+		}
+
+		const desiredTitle = thread.firstPrompt?.trim()
+			? this.buildCopilotTitle(thread.firstPrompt)
+			: 'New recruitment chat';
+		if (!thread.title?.trim() || (thread.title === 'New recruitment chat' && desiredTitle !== thread.title)) {
+			thread.title = desiredTitle;
+			changed = true;
+		}
+
+		if (changed) {
+			await thread.save();
+		}
+
+		return thread;
+	}
+
+	private async ensureCopilotThreadIndexes(forceRepair = false) {
+		const collection = this.copilotThreadModel.collection;
+		const indexes = await collection.indexes();
+		const staleUserIndex = indexes.find((index) => index.name === 'userId_1' && index.unique);
+
+		if (staleUserIndex || forceRepair) {
+			try {
+				await collection.dropIndex('userId_1');
+				this.logger.log('Dropped stale unique index userId_1 from copilot_threads.');
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				if (!message.includes('index not found')) {
+					throw error;
+				}
+			}
+		}
+
+		await this.copilotThreadModel.syncIndexes();
+	}
+
+	private isDuplicateUserIndexError(error: unknown) {
+		if (!error || typeof error !== 'object') {
+			return false;
+		}
+		const candidate = error as { code?: number; keyPattern?: Record<string, unknown>; message?: string };
+		return candidate.code === 11000
+			&& (candidate.keyPattern?.userId === 1 || candidate.message?.includes('index: userId_1') === true);
 	}
 
 	async generateJobOffer(userPrompt: string): Promise<GeneratedJobOffer> {

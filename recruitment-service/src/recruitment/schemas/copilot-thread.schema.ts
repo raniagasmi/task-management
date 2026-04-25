@@ -19,12 +19,31 @@ export const CopilotMessageSchema = SchemaFactory.createForClass(CopilotMessage)
 
 @Schema({ collection: 'copilot_threads', timestamps: true })
 export class CopilotThread {
-  @Prop({ required: true, index: true, unique: true })
+  @Prop({ required: true, index: true })
   userId!: string;
+
+  @Prop({ required: true, index: true })
+  threadId!: string;
+
+  @Prop({ required: true, trim: true, default: 'New recruitment chat' })
+  title!: string;
+
+  @Prop({ trim: true, default: '' })
+  firstPrompt!: string;
+
+  @Prop({ type: Boolean, default: false })
+  isArchived!: boolean;
+
+  @Prop({ type: Boolean, default: false })
+  isMuted!: boolean;
+
+  @Prop({ type: Boolean, default: false })
+  isDeleted!: boolean;
 
   @Prop({ type: [CopilotMessageSchema], default: [] })
   messages!: Types.DocumentArray<CopilotMessage>;
 }
 
 export const CopilotThreadSchema = SchemaFactory.createForClass(CopilotThread);
+CopilotThreadSchema.index({ userId: 1, threadId: 1 }, { unique: true });
 

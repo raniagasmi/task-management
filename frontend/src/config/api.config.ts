@@ -32,6 +32,11 @@ export const API_ENDPOINTS = {
     COPILOT_HISTORY: '/api/recruitment/copilot/history',
     COPILOT_MESSAGE: '/api/recruitment/copilot/message',
     COPILOT_RESET: '/api/recruitment/copilot/reset',
+    COPILOT_THREADS: '/api/recruitment/copilot/threads',
+    COPILOT_THREAD: (threadId: string) => `/api/recruitment/copilot/threads/${threadId}`,
+    COPILOT_THREAD_ARCHIVE: (threadId: string) => `/api/recruitment/copilot/threads/${threadId}/archive`,
+    COPILOT_THREAD_MUTE: (threadId: string) => `/api/recruitment/copilot/threads/${threadId}/mute`,
+    COPILOT_THREAD_DELETE: (threadId: string) => `/api/recruitment/copilot/threads/${threadId}/delete`,
   },
   DASHBOARD: {
     ME: '/dashboard/me',

@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Post, Query, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ChatResponse, GeneratedJobOffer } from './recruitment.service';
 import { ChatMessageDto } from './dto/chat-message.dto';
 import { CopilotAppendMessageDto } from './dto/copilot-message.dto';
 import { CopilotResetDto } from './dto/copilot-reset.dto';
+import { CopilotCreateThreadDto, CopilotThreadActionDto } from './dto/copilot-thread.dto';
 import { GenerateJobOfferDto } from './dto/generate-job-offer.dto';
 import { GenerateLinkedInPostDto } from './dto/generate-linkedin-post.dto';
 import { RecruitmentService } from './recruitment.service';
@@ -57,6 +58,28 @@ export class RecruitmentController {
 		return this.recruitmentService.getCopilotHistory((userId ?? '').trim());
 	}
 
+	@Get('copilot/threads')
+	async copilotThreads(@Query('userId') userId?: string) {
+		return this.recruitmentService.listCopilotThreads((userId ?? '').trim());
+	}
+
+	@Get('copilot/threads/:threadId')
+	async copilotThread(@Param('threadId') threadId: string, @Query('userId') userId?: string) {
+		return this.recruitmentService.getCopilotThread((userId ?? '').trim(), threadId);
+	}
+
+	@Post('copilot/threads')
+	@UsePipes(
+		new ValidationPipe({
+			whitelist: true,
+			forbidNonWhitelisted: true,
+			transform: true,
+		}),
+	)
+	async copilotCreateThread(@Body() body: CopilotCreateThreadDto) {
+		return this.recruitmentService.createCopilotThread(body.userId);
+	}
+
 	@Post('copilot/message')
 	@UsePipes(
 		new ValidationPipe({
@@ -66,7 +89,19 @@ export class RecruitmentController {
 		}),
 	)
 	async copilotAppend(@Body() body: CopilotAppendMessageDto) {
-		return this.recruitmentService.appendCopilotMessage(body.userId, body.role, body.content);
+		return this.recruitmentService.appendCopilotMessage(body.userId, body.threadId, body.role, body.content);
+	}
+
+	@Patch('copilot/threads/:threadId')
+	@UsePipes(
+		new ValidationPipe({
+			whitelist: true,
+			forbidNonWhitelisted: true,
+			transform: true,
+		}),
+	)
+	async copilotThreadAction(@Param('threadId') threadId: string, @Body() body: CopilotThreadActionDto) {
+		return this.recruitmentService.updateCopilotThread(body.userId, threadId, body);
 	}
 
 	@Post('copilot/reset')
@@ -78,6 +113,6 @@ export class RecruitmentController {
 		}),
 	)
 	async copilotReset(@Body() body: CopilotResetDto) {
-		return this.recruitmentService.resetCopilotHistory(body.userId);
+		return this.recruitmentService.resetCopilotHistory(body.userId, body.threadId);
 	}
 }

@@ -29,12 +29,30 @@ export class RecruitmentService {
     return this.forwardGet(`/recruitment/copilot/history?userId=${encoded}`);
   }
 
-  async appendCopilotMessage(body: { userId: string; role: 'user' | 'assistant'; content: string }) {
+  async listCopilotThreads(userId: string) {
+    const encoded = encodeURIComponent(userId);
+    return this.forwardGet(`/recruitment/copilot/threads?userId=${encoded}`);
+  }
+
+  async getCopilotThread(userId: string, threadId: string) {
+    const encoded = encodeURIComponent(userId);
+    return this.forwardGet(`/recruitment/copilot/threads/${threadId}?userId=${encoded}`);
+  }
+
+  async createCopilotThread(userId: string) {
+    return this.forwardPost('/recruitment/copilot/threads', { userId });
+  }
+
+  async appendCopilotMessage(body: { userId: string; threadId: string; role: 'user' | 'assistant'; content: string }) {
     return this.forwardPost('/recruitment/copilot/message', body);
   }
 
-  async resetCopilotHistory(userId: string) {
-    return this.forwardPost('/recruitment/copilot/reset', { userId });
+  async resetCopilotHistory(userId: string, threadId?: string) {
+    return this.forwardPost('/recruitment/copilot/reset', { userId, threadId });
+  }
+
+  async updateCopilotThread(body: { userId: string; threadId: string; isArchived?: boolean; isMuted?: boolean; isDeleted?: boolean }) {
+    return this.forward('PATCH', `/recruitment/copilot/threads/${body.threadId}`, body);
   }
 
   private async forwardGet(path: string) {
@@ -45,7 +63,7 @@ export class RecruitmentService {
     return this.forward('POST', path, body);
   }
 
-  private async forward(method: 'GET' | 'POST', path: string, body?: unknown) {
+  private async forward(method: 'GET' | 'POST' | 'PATCH', path: string, body?: unknown) {
     try {
       const response = await fetch(`${this.baseUrl}${path}`, {
         method,
