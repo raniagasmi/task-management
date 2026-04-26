@@ -1,6 +1,8 @@
 import {
   Injectable,
   Inject,
+  HttpException,
+  InternalServerErrorException,
   UnauthorizedException,
   BadRequestException,
   ConflictException,
@@ -126,32 +128,75 @@ export class AuthService {
   }
 
   async forgotPassword(email: string) {
-    return firstValueFrom(
-      this.userServiceClient.send({ cmd: 'forgot_password' }, { email }),
-    );
+    try {
+      return await firstValueFrom(
+        this.userServiceClient.send({ cmd: 'forgot_password' }, { email }),
+      );
+    } catch (error) {
+      this.rethrowRpcError(error);
+    }
   }
 
   async resetPassword(token: string, newPassword: string) {
-    return firstValueFrom(
-      this.userServiceClient.send({ cmd: 'reset_password' }, { token, newPassword }),
-    );
+    try {
+      return await firstValueFrom(
+        this.userServiceClient.send({ cmd: 'reset_password' }, { token, newPassword }),
+      );
+    } catch (error) {
+      this.rethrowRpcError(error);
+    }
   }
 
   async verifyEmail(token: string) {
-    return firstValueFrom(
-      this.userServiceClient.send({ cmd: 'verify_email' }, { token }),
-    );
+    try {
+      return await firstValueFrom(
+        this.userServiceClient.send({ cmd: 'verify_email' }, { token }),
+      );
+    } catch (error) {
+      this.rethrowRpcError(error);
+    }
   }
 
   async resendVerification(email: string) {
-    return firstValueFrom(
-      this.userServiceClient.send({ cmd: 'resend_verification' }, { email }),
-    );
+    try {
+      return await firstValueFrom(
+        this.userServiceClient.send({ cmd: 'resend_verification' }, { email }),
+      );
+    } catch (error) {
+      this.rethrowRpcError(error);
+    }
   }
 
   async initiateSso(provider: string, email?: string) {
-    return firstValueFrom(
-      this.userServiceClient.send({ cmd: 'initiate_sso' }, { provider, email }),
-    );
+    try {
+      return await firstValueFrom(
+        this.userServiceClient.send({ cmd: 'initiate_sso' }, { provider, email }),
+      );
+    } catch (error) {
+      this.rethrowRpcError(error);
+    }
+  }
+
+  private rethrowRpcError(error: unknown): never {
+    const payload = typeof error === 'object' && error !== null
+      ? (error as { statusCode?: number; status?: number | string; message?: string | string[] })
+      : {};
+
+    const rawStatus = payload.statusCode ?? payload.status;
+    const statusCode =
+      typeof rawStatus === 'number'
+        ? rawStatus
+        : typeof rawStatus === 'string' && /^\d+$/.test(rawStatus)
+          ? Number(rawStatus)
+          : 500;
+    const message = Array.isArray(payload.message)
+      ? payload.message.join(', ')
+      : payload.message || 'Internal server error';
+
+    if (statusCode >= 400 && statusCode < 600) {
+      throw new HttpException({ statusCode, message }, statusCode);
+    }
+
+    throw new InternalServerErrorException(message);
   }
 }

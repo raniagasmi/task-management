@@ -50,7 +50,6 @@ interface AuthActionResponse {
   success: boolean;
   message: string;
   verificationToken?: string;
-  resetToken?: string;
   provider?: string;
   available?: boolean;
 }
@@ -162,6 +161,32 @@ export const authService = {
     window.location.href = '/login';
   },
 
+  restoreSession: (): User | null => {
+    try {
+      const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+
+      if (!token || !userStr) {
+        return null;
+      }
+
+      if (!authService.isAuthenticated()) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        return null;
+      }
+
+      const user = normalizeUser(JSON.parse(userStr));
+      localStorage.setItem('user', JSON.stringify(user));
+      return user;
+    } catch (error) {
+      console.error('Error restoring session:', error);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      return null;
+    }
+  },
+
   getCurrentUser: (): User | null => {
     try {
       const userStr = localStorage.getItem('user');
@@ -180,7 +205,8 @@ export const authService = {
       return normalizeUser(JSON.parse(userStr));
     } catch (error) {
       console.error('Error getting current user:', error);
-      authService.logout();
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
       return null;
     }
   },
@@ -208,13 +234,15 @@ export const authService = {
 
       const isValid = decoded.exp * 1000 > Date.now();
       if (!isValid) {
-        authService.logout();
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
       }
 
       return isValid;
     } catch (error) {
       console.error('Token validation error:', error);
-      authService.logout();
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
       return false;
     }
   }

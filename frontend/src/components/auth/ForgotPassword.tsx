@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import {
   Alert,
   AlertIcon,
@@ -13,13 +13,10 @@ import {
   Link,
   Stack,
   Text,
-  useToast,
 } from '@chakra-ui/react';
 import { authService } from '../../services/auth.service';
 
 const ForgotPassword = () => {
-  const navigate = useNavigate();
-  const toast = useToast();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -34,16 +31,6 @@ const ForgotPassword = () => {
     try {
       const result = await authService.forgotPassword(email.trim().toLowerCase());
       setMessage(result.message);
-      if (result.resetToken) {
-        toast({
-          title: 'Reset link prepared',
-          description: 'Opening the reset form for this demo environment.',
-          status: 'success',
-          duration: 3000,
-          isClosable: true,
-        });
-        navigate(`/reset-password?token=${result.resetToken}`);
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to request reset.');
     } finally {
@@ -58,7 +45,7 @@ const ForgotPassword = () => {
           Reset your password
         </Heading>
         <Text color="rgba(216,216,219,0.76)" mb={6}>
-          Enter your email and we’ll prepare a secure reset link.
+          Enter your email and we&apos;ll send a secure reset link if the address exists in Flexity.
         </Text>
 
         {error && (
