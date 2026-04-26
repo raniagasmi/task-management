@@ -24,7 +24,7 @@ interface ColumnProps {
   onAddTask: (status: TaskStatus) => void;
   onEditTask: (task: TaskType) => void;
   onDeleteTask: (id: string) => void;
- 
+  canAddTask?: boolean;
 }
 
 const Column: React.FC<ColumnProps> = ({
@@ -33,7 +33,7 @@ const Column: React.FC<ColumnProps> = ({
   onAddTask,
   onEditTask,
   onDeleteTask,
-
+  canAddTask = true,
 }) => {
   const { setNodeRef } = useDroppable({ id: status });
   
@@ -76,27 +76,23 @@ const Column: React.FC<ColumnProps> = ({
             ({tasks.length})
           </Text>
         </Flex>
-        <Tooltip label={`Add task to ${statusLabels[status]}`}>
-          <IconButton
-            aria-label={`Add task to ${status}`}
-            icon={<AddIcon />}
-            size="sm"
-            onClick={() => onAddTask(status)}
-            colorScheme={statusColors[status]}
-            variant="ghost"
-           
-          />
-        </Tooltip>
+        {canAddTask && (
+          <Tooltip label={`Add task to ${statusLabels[status]}`}>
+            <IconButton
+              aria-label={`Add task to ${status}`}
+              icon={<AddIcon />}
+              size="sm"
+              onClick={() => onAddTask(status)}
+              colorScheme={statusColors[status]}
+              variant="ghost"
+            />
+          </Tooltip>
+        )}
       </Flex>
       <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
         <Box minH="50px">
           {tasks.map((task) => (
             <Task
-
-            
-          
-
-
               key={task.id}
               task={task}
               onEdit={onEditTask}

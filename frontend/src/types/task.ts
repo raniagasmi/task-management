@@ -10,6 +10,12 @@ export enum TaskPriority {
   HIGH = 'HIGH'
 }
 
+export enum TaskDecisionStatus {
+  PENDING = 'PENDING',
+  ACCEPTED = 'ACCEPTED',
+  DECLINED = 'DECLINED',
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -20,10 +26,17 @@ export interface Task {
   assignedToUser?: {
     firstName: string;
     lastName: string;
+    email?: string;
+    presenceStatus?: 'ONLINE' | 'PAUSE' | 'OFFLINE';
   };
   createdBy: string;
   order: number;
   conversationId?: string;
+  rationale?: string;
+  decisionStatus?: TaskDecisionStatus;
+  blockerNote?: string;
+  employeeComment?: string;
+  estimatedHours?: number;
   createdAt?: Date;
   updatedAt?: Date;
   dueDate?: Date;

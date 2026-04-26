@@ -12,6 +12,12 @@ export enum TaskPriority {
   HIGH = 'HIGH'
 }
 
+export enum TaskDecisionStatus {
+  PENDING = 'PENDING',
+  ACCEPTED = 'ACCEPTED',
+  DECLINED = 'DECLINED',
+}
+
 @Entity('tasks')
 export class Task {
   @PrimaryGeneratedColumn('uuid')
@@ -49,9 +55,24 @@ export class Task {
   @Column({ type: 'varchar', length: 255, nullable: true })
   proposalId?: string;
 
-  
+  @Column({ type: 'text', nullable: true })
+  rationale?: string;
 
- 
+  @Column({
+    type: 'enum',
+    enum: TaskDecisionStatus,
+    default: TaskDecisionStatus.PENDING,
+  })
+  decisionStatus!: TaskDecisionStatus;
+
+  @Column({ type: 'text', nullable: true })
+  blockerNote?: string;
+
+  @Column({ type: 'text', nullable: true })
+  employeeComment?: string;
+
+  @Column({ type: 'numeric', nullable: true })
+  estimatedHours?: number;
 
   @Column({ type: 'int', default: 0 })
   order!: number;

@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Badge, Box, Button, Flex, IconButton, Image, Stack, Text } from '@chakra-ui/react';
 import { NotAllowedIcon } from '@chakra-ui/icons';
 import { authService } from '../../services/auth.service';
@@ -11,8 +11,12 @@ interface SideNavbarProps {
 
 const SideNavbar = ({ onLogoutClick }: SideNavbarProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const currentUser = authService.getCurrentUser();
   const isAdmin = currentUser?.role?.toLowerCase() === UserRole.ADMIN;
+
+  const isEmployeeHubLinkActive = (view: string) =>
+    !isAdmin && location.pathname === '/app' && new URLSearchParams(location.search).get('view') === view;
 
   const navLinkSx = {
     display: 'inline-flex',
@@ -37,6 +41,16 @@ const SideNavbar = ({ onLogoutClick }: SideNavbarProps) => {
     },
   };
 
+  const employeeNavSx = (selected: boolean) => ({
+    ...navLinkSx,
+    ...(selected
+      ? {
+          color: '#7ee8d6',
+          bg: 'rgba(126, 232, 214, 0.16)',
+        }
+      : {}),
+  });
+
   return (
     <Flex
       as="aside"
@@ -57,12 +71,46 @@ const SideNavbar = ({ onLogoutClick }: SideNavbarProps) => {
         <Image src={logoImage} alt="Task Manager logo" maxW="150px" mb={6} />
 
         <Stack spacing={2}>
-          <Text as={NavLink} to="/app" sx={navLinkSx}>
-            Tasks
-          </Text>
-          <Text as={NavLink} to="/collaboration" sx={navLinkSx}>
-            Collaboration
-          </Text>
+          {isAdmin ? (
+            <>
+              <Text as={NavLink} to="/app" sx={navLinkSx}>
+                Tasks
+              </Text>
+              <Text as={NavLink} to="/collaboration" sx={navLinkSx}>
+                Collaboration
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text
+                as="button"
+                type="button"
+                onClick={() => navigate('/app?view=tasks')}
+                sx={employeeNavSx(isEmployeeHubLinkActive('tasks'))}
+              >
+                Task Board
+              </Text>
+              <Text
+                as="button"
+                type="button"
+                onClick={() => navigate('/app?view=projects')}
+                sx={employeeNavSx(isEmployeeHubLinkActive('projects'))}
+              >
+                Projects
+              </Text>
+              <Text
+                as="button"
+                type="button"
+                onClick={() => navigate('/app?view=week')}
+                sx={employeeNavSx(isEmployeeHubLinkActive('week'))}
+              >
+                My Week
+              </Text>
+              <Text as={NavLink} to="/collaboration" sx={navLinkSx}>
+                Collaboration
+              </Text>
+            </>
+          )}
           {isAdmin && (
             <>
               <Text as={NavLink} to="/recruitment" sx={navLinkSx}>

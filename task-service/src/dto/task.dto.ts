@@ -1,5 +1,5 @@
-import { IsString, IsEnum, IsOptional, IsArray, IsDate, IsNumber, IsEmail } from 'class-validator';
-import { TaskStatus, TaskPriority } from '../entities/task.entity';
+import { IsString, IsEnum, IsOptional, IsArray, IsDate, IsNumber } from 'class-validator';
+import { TaskStatus, TaskPriority, TaskDecisionStatus } from '../entities/task.entity';
 
 export class CreateTaskDto {
   @IsString()
@@ -35,6 +35,26 @@ export class CreateTaskDto {
   @IsString()
   @IsOptional()
   proposalId?: string;
+
+  @IsString()
+  @IsOptional()
+  rationale?: string;
+
+  @IsEnum(TaskDecisionStatus)
+  @IsOptional()
+  decisionStatus?: TaskDecisionStatus;
+
+  @IsString()
+  @IsOptional()
+  blockerNote?: string;
+
+  @IsString()
+  @IsOptional()
+  employeeComment?: string;
+
+  @IsNumber()
+  @IsOptional()
+  estimatedHours?: number;
 }
 
 export class UpdateTaskDto {
@@ -77,6 +97,26 @@ export class UpdateTaskDto {
   @IsString()
   @IsOptional()
   proposalId?: string;
+
+  @IsString()
+  @IsOptional()
+  rationale?: string;
+
+  @IsEnum(TaskDecisionStatus)
+  @IsOptional()
+  decisionStatus?: TaskDecisionStatus;
+
+  @IsString()
+  @IsOptional()
+  blockerNote?: string;
+
+  @IsString()
+  @IsOptional()
+  employeeComment?: string;
+
+  @IsNumber()
+  @IsOptional()
+  estimatedHours?: number;
 }
 
 export class CreateTaskBatchDto {
