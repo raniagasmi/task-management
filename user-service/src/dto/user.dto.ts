@@ -22,6 +22,21 @@ export class CreateUserDto {
     @IsOptional()
     @IsEnum(UserRole)
     role?: UserRole;
+
+    @IsOptional()
+    @IsString()
+    teamSize?: string;
+
+    @IsOptional()
+    @IsString()
+    primaryUseCase?: string;
+
+    @IsOptional()
+    @IsString()
+    workspaceRole?: string;
+
+    @IsOptional()
+    invitedTeammates?: string[];
 }
 
 export class LoginUserDto {
@@ -46,6 +61,24 @@ export class UpdateUserDto {
 
     @IsEnum(UserRole)
     role?: UserRole;
+
+    @IsOptional()
+    @IsString()
+    teamSize?: string;
+
+    @IsOptional()
+    @IsString()
+    primaryUseCase?: string;
+
+    @IsOptional()
+    @IsString()
+    workspaceRole?: string;
+
+    @IsOptional()
+    invitedTeammates?: string[];
+
+    @IsOptional()
+    onboardingCompleted?: boolean;
 }
 
 export class UpdatePresenceDto {
@@ -56,4 +89,43 @@ export class UpdatePresenceDto {
     @IsOptional()
     @IsISO8601()
     lastActiveAt?: string;
+}
+
+export class ForgotPasswordDto {
+    @IsNotEmpty()
+    @IsEmail()
+    email!: string;
+}
+
+export class ResetPasswordDto {
+    @IsNotEmpty()
+    @IsString()
+    token!: string;
+
+    @IsNotEmpty()
+    @IsString()
+    @MinLength(6)
+    newPassword!: string;
+}
+
+export class VerifyEmailDto {
+    @IsNotEmpty()
+    @IsString()
+    token!: string;
+}
+
+export class ResendVerificationDto {
+    @IsNotEmpty()
+    @IsEmail()
+    email!: string;
+}
+
+export class InitiateSsoDto {
+    @IsNotEmpty()
+    @IsString()
+    provider!: string;
+
+    @IsOptional()
+    @IsEmail()
+    email?: string;
 }

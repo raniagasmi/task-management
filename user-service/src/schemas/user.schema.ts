@@ -46,6 +46,33 @@ export class User {
 
     @Prop({ type: Date, default: null })
     presenceUpdatedAt!: Date | null;
+
+    @Prop({ default: false })
+    emailVerified!: boolean;
+
+    @Prop({ type: String, default: null })
+    emailVerificationToken!: string | null;
+
+    @Prop({ type: String, default: null })
+    resetPasswordToken!: string | null;
+
+    @Prop({ type: Date, default: null })
+    resetPasswordExpiresAt!: Date | null;
+
+    @Prop({ type: String, default: '' })
+    teamSize!: string;
+
+    @Prop({ type: String, default: '' })
+    primaryUseCase!: string;
+
+    @Prop({ type: String, default: '' })
+    workspaceRole!: string;
+
+    @Prop({ type: [String], default: [] })
+    invitedTeammates!: string[];
+
+    @Prop({ default: false })
+    onboardingCompleted!: boolean;
 }
 
 export type UserDocument = User & Document;

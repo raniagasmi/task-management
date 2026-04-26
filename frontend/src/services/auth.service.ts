@@ -12,6 +12,9 @@ interface RegisterData {
   lastName: string;
   email: string;
   password: string;
+  teamSize?: string;
+  primaryUseCase?: string;
+  invitedTeammates?: string[];
 }
 
 interface User {
@@ -22,11 +25,18 @@ interface User {
   firstName?: string;
   lastName?: string;
   role: string;
+  emailVerified?: boolean;
+  teamSize?: string;
+  workspaceRole?: string;
+  primaryUseCase?: string;
+  invitedTeammates?: string[];
+  onboardingCompleted?: boolean;
 }
 
 interface AuthResponse {
   access_token: string;
   user: User;
+  verificationToken?: string;
 }
 
 interface JwtPayload {
@@ -34,6 +44,15 @@ interface JwtPayload {
   email: string;
   role: string;
   exp: number;
+}
+
+interface AuthActionResponse {
+  success: boolean;
+  message: string;
+  verificationToken?: string;
+  resetToken?: string;
+  provider?: string;
+  available?: boolean;
 }
 
 const normalizeRole = (role?: string) => role?.toLowerCase() ?? '';
@@ -103,6 +122,38 @@ export const authService = {
       localStorage.removeItem('user');
       throw error;
     }
+  },
+
+  forgotPassword: async (email: string): Promise<AuthActionResponse> => {
+    const response = await api.post<AuthActionResponse>(API_ENDPOINTS.AUTH.FORGOT_PASSWORD, { email });
+    return response.data;
+  },
+
+  resetPassword: async (token: string, newPassword: string): Promise<AuthActionResponse> => {
+    const response = await api.post<AuthActionResponse>(API_ENDPOINTS.AUTH.RESET_PASSWORD, { token, newPassword });
+    return response.data;
+  },
+
+  verifyEmail: async (token: string): Promise<AuthActionResponse & { user?: User }> => {
+    const response = await api.post<AuthActionResponse & { user?: User }>(API_ENDPOINTS.AUTH.VERIFY_EMAIL, { token });
+    if (response.data.user) {
+      const existingUser = authService.getCurrentUser();
+      localStorage.setItem('user', JSON.stringify({
+        ...(existingUser ?? {}),
+        ...normalizeUser(response.data.user),
+      }));
+    }
+    return response.data;
+  },
+
+  resendVerification: async (email: string): Promise<AuthActionResponse> => {
+    const response = await api.post<AuthActionResponse>(API_ENDPOINTS.AUTH.RESEND_VERIFICATION, { email });
+    return response.data;
+  },
+
+  initiateSso: async (provider: 'google' | 'microsoft', email?: string): Promise<AuthActionResponse> => {
+    const response = await api.post<AuthActionResponse>(API_ENDPOINTS.AUTH.SSO_INITIATE, { provider, email });
+    return response.data;
   },
 
   logout: () => {

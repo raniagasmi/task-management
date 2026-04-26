@@ -6,12 +6,42 @@
   font-family: 'Inter', sans-serif;
   -ms-overflow-style: none;  
   scrollbar-width: none; 
+  box-sizing: border-box;
 }
 
 :root {
   --dark-color: #28282D;
   --light-color: #333339;
   --font-color: #D8D8DB;
+  --brand-color: #319795;
+  --brand-deep-color: #216e6d;
+  --brand-soft-color: #d9f3f0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  overflow-y: auto;
+  background: #f2fbfa;
+  transition: background-color 220ms ease, color 220ms ease;
+}
+
+a,
+button,
+input,
+textarea,
+select {
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
 .loading {

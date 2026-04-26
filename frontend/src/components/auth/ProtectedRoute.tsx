@@ -20,7 +20,7 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
     const permittedRoles = allowedRoles.map((item) => item.toLowerCase());
 
     if (!role || !permittedRoles.includes(role as UserRole)) {
-      return <Navigate to="/" replace />;
+      return <Navigate to="/app" replace />;
     }
   }
 

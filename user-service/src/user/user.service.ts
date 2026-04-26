@@ -9,12 +9,14 @@ import { validate as validateUuid } from 'uuid';
 
 @Injectable()
 export class UserService {
+    private readonly safeSelect = '-password -emailVerificationToken -resetPasswordToken -resetPasswordExpiresAt';
+
     constructor(
         @InjectModel(User.name) private userModel: Model<UserDocument>,
     ) {}
 
     async findAll(): Promise<UserDocument[]> {
-        return this.userModel.find().select('-password');
+        return this.userModel.find().select(this.safeSelect);
     }
 
     async findById(id: string): Promise<UserDocument> {
@@ -25,7 +27,7 @@ export class UserService {
     
             if (validateUuid(id)) {
                 console.log('Valid UUID:', id);
-                const user = await this.userModel.findOne({ _id: id }).select('-password'); 
+                const user = await this.userModel.findOne({ _id: id }).select(this.safeSelect); 
                 if (!user) {
                     console.log('User not found for UUID:', id);
                     throw new NotFoundException('User not found');
@@ -38,7 +40,7 @@ export class UserService {
                 throw new BadRequestException('Invalid user ID format');
             }
     
-            const user = await this.userModel.findById(id).select('-password');
+            const user = await this.userModel.findById(id).select(this.safeSelect);
             if (!user) {
                 console.log('User not found for ObjectId:', id);
                 throw new NotFoundException('User not found');
@@ -65,7 +67,7 @@ export class UserService {
             id,
             updateUserDto,
             { new: true }
-        ).select('-password');
+        ).select(this.safeSelect);
 
         if (!user) {
             throw new NotFoundException('User not found');
@@ -109,7 +111,7 @@ export class UserService {
 
 
     async findByEmail(email: string): Promise<UserDocument> {
-        return this.userModel.findOne({ email }).select('-password');
+        return this.userModel.findOne({ email }).select(this.safeSelect);
     }
 
     async updatePresence(id: string, updatePresenceDto: UpdatePresenceDto): Promise<UserDocument> {
@@ -138,7 +140,7 @@ export class UserService {
             id,
             updates,
             { new: true },
-        ).select('-password');
+        ).select(this.safeSelect);
 
         if (!user) {
             throw new NotFoundException('User not found');

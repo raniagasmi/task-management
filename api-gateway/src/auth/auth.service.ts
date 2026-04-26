@@ -61,6 +61,12 @@ export class AuthService {
           firstName: user.firstName,
           lastName: user.lastName,
           role: user.role,
+          emailVerified: user.emailVerified,
+          teamSize: user.teamSize,
+          workspaceRole: user.workspaceRole,
+          primaryUseCase: user.primaryUseCase,
+          invitedTeammates: user.invitedTeammates,
+          onboardingCompleted: user.onboardingCompleted,
         },
       };
     } catch (error) {
@@ -97,7 +103,14 @@ export class AuthService {
           firstName: result.user.firstName,
           lastName: result.user.lastName,
           role: result.user.role,
+          emailVerified: result.user.emailVerified,
+          teamSize: result.user.teamSize,
+          workspaceRole: result.user.workspaceRole,
+          primaryUseCase: result.user.primaryUseCase,
+          invitedTeammates: result.user.invitedTeammates,
+          onboardingCompleted: result.user.onboardingCompleted,
         },
+        verificationToken: result.verificationToken,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -110,5 +123,35 @@ export class AuthService {
       }
       throw new BadRequestException('Registration failed: ' + errorMessage);
     }
+  }
+
+  async forgotPassword(email: string) {
+    return firstValueFrom(
+      this.userServiceClient.send({ cmd: 'forgot_password' }, { email }),
+    );
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    return firstValueFrom(
+      this.userServiceClient.send({ cmd: 'reset_password' }, { token, newPassword }),
+    );
+  }
+
+  async verifyEmail(token: string) {
+    return firstValueFrom(
+      this.userServiceClient.send({ cmd: 'verify_email' }, { token }),
+    );
+  }
+
+  async resendVerification(email: string) {
+    return firstValueFrom(
+      this.userServiceClient.send({ cmd: 'resend_verification' }, { email }),
+    );
+  }
+
+  async initiateSso(provider: string, email?: string) {
+    return firstValueFrom(
+      this.userServiceClient.send({ cmd: 'initiate_sso' }, { provider, email }),
+    );
   }
 }

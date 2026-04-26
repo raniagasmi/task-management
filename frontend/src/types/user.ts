@@ -18,6 +18,12 @@ export interface User {
   lastName: string;
   role: UserRole;
   isActive: boolean;
+  emailVerified?: boolean;
+  teamSize?: string;
+  workspaceRole?: string;
+  primaryUseCase?: string;
+  invitedTeammates?: string[];
+  onboardingCompleted?: boolean;
   presenceStatus?: PresenceStatus;
   lastActiveAt?: string | null;
   presenceUpdatedAt?: string | null;

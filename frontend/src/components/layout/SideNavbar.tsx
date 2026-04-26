@@ -57,7 +57,7 @@ const SideNavbar = ({ onLogoutClick }: SideNavbarProps) => {
         <Image src={logoImage} alt="Task Manager logo" maxW="150px" mb={6} />
 
         <Stack spacing={2}>
-          <Text as={NavLink} to="/" sx={navLinkSx}>
+          <Text as={NavLink} to="/app" sx={navLinkSx}>
             Tasks
           </Text>
           <Text as={NavLink} to="/collaboration" sx={navLinkSx}>

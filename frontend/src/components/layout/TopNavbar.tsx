@@ -55,7 +55,7 @@ const TopNavbar = () => {
         </Text>
 
         <HStack spacing={4} gap={4}>
-          <Text as={NavLink} to="/" sx={navLinkSx}>
+          <Text as={NavLink} to="/app" sx={navLinkSx}>
             Tasks
           </Text>
           {isAdmin && (

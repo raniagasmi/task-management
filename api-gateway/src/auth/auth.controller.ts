@@ -40,4 +40,49 @@ export class AuthController {
     }
     return this.authService.register(createUserDto);
   }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() body: { email: string }) {
+    if (!body?.email) {
+      throw new BadRequestException('Email is required');
+    }
+    return this.authService.forgotPassword(body.email);
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() body: { token: string; newPassword: string }) {
+    if (!body?.token || !body?.newPassword) {
+      throw new BadRequestException('Token and new password are required');
+    }
+    return this.authService.resetPassword(body.token, body.newPassword);
+  }
+
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  async verifyEmail(@Body() body: { token: string }) {
+    if (!body?.token) {
+      throw new BadRequestException('Token is required');
+    }
+    return this.authService.verifyEmail(body.token);
+  }
+
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.OK)
+  async resendVerification(@Body() body: { email: string }) {
+    if (!body?.email) {
+      throw new BadRequestException('Email is required');
+    }
+    return this.authService.resendVerification(body.email);
+  }
+
+  @Post('sso/initiate')
+  @HttpCode(HttpStatus.OK)
+  async initiateSso(@Body() body: { provider: string; email?: string }) {
+    if (!body?.provider) {
+      throw new BadRequestException('Provider is required');
+    }
+    return this.authService.initiateSso(body.provider, body.email);
+  }
 }
