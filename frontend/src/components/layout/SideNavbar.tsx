@@ -1,6 +1,5 @@
-import { NavLink, useNavigate } from 'react-router-dom';
-import { Badge, Box, Button, Flex, IconButton, Image, Stack, Text } from '@chakra-ui/react';
-import { NotAllowedIcon } from '@chakra-ui/icons';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { Badge, Box, Button, Flex, Image, Stack, Text } from '@chakra-ui/react';
 import { authService } from '../../services/auth.service';
 import { UserRole } from '../../types/user';
 import logoImage from '../../assets/images/logo.png';
@@ -9,10 +8,14 @@ interface SideNavbarProps {
   onLogoutClick?: () => void;
 }
 
+type EmployeeNavSection = 'work-hub' | 'projects' | 'week';
+
 const SideNavbar = ({ onLogoutClick }: SideNavbarProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const currentUser = authService.getCurrentUser();
   const isAdmin = currentUser?.role?.toLowerCase() === UserRole.ADMIN;
+  const currentSection = (new URLSearchParams(location.search).get('section') ?? 'work-hub') as EmployeeNavSection;
 
   const navLinkSx = {
     display: 'inline-flex',
@@ -37,6 +40,29 @@ const SideNavbar = ({ onLogoutClick }: SideNavbarProps) => {
     },
   };
 
+  const employeeNavItems = [
+    {
+      label: 'My Work Hub',
+      isActive: location.pathname === '/app' && currentSection === 'work-hub',
+      onClick: () => navigate('/app'),
+    },
+    {
+      label: 'My Projects',
+      isActive: location.pathname === '/app' && currentSection === 'projects',
+      onClick: () => navigate('/app?section=projects'),
+    },
+    {
+      label: 'My Week',
+      isActive: location.pathname === '/app' && currentSection === 'week',
+      onClick: () => navigate('/app?section=week'),
+    },
+    {
+      label: 'Collaboration',
+      isActive: location.pathname === '/collaboration',
+      onClick: () => navigate('/collaboration'),
+    },
+  ];
+
   return (
     <Flex
       as="aside"
@@ -57,14 +83,14 @@ const SideNavbar = ({ onLogoutClick }: SideNavbarProps) => {
         <Image src={logoImage} alt="Task Manager logo" maxW="150px" mb={6} />
 
         <Stack spacing={2}>
-          <Text as={NavLink} to="/app" sx={navLinkSx}>
-            Tasks
-          </Text>
-          <Text as={NavLink} to="/collaboration" sx={navLinkSx}>
-            Collaboration
-          </Text>
-          {isAdmin && (
+          {isAdmin ? (
             <>
+              <Text as={NavLink} to="/app" sx={navLinkSx}>
+                Tasks
+              </Text>
+              <Text as={NavLink} to="/collaboration" sx={navLinkSx}>
+                Collaboration
+              </Text>
               <Text as={NavLink} to="/recruitment" sx={navLinkSx}>
                 Recruitment
               </Text>
@@ -72,6 +98,31 @@ const SideNavbar = ({ onLogoutClick }: SideNavbarProps) => {
                 Admin
               </Text>
             </>
+          ) : (
+            employeeNavItems.map((item) => (
+              <Button
+                key={item.label}
+                onClick={item.onClick}
+                variant="ghost"
+                justifyContent="flex-start"
+                px={3}
+                py={2}
+                h="auto"
+                borderRadius="md"
+                fontSize="0.95rem"
+                fontWeight={600}
+                letterSpacing="0.02em"
+                color={item.isActive ? '#7ee8d6' : 'var(--font-color)'}
+                bg={item.isActive ? 'rgba(126, 232, 214, 0.16)' : 'transparent'}
+                w="full"
+                _hover={{
+                  color: '#7ee8d6',
+                  bg: 'rgba(126, 232, 214, 0.12)',
+                }}
+              >
+                {item.label}
+              </Button>
+            ))
           )}
         </Stack>
       </Box>
@@ -86,19 +137,32 @@ const SideNavbar = ({ onLogoutClick }: SideNavbarProps) => {
           colorScheme="teal"
           variant="outline"
           size="sm"
+          w="full"
+          justifyContent="center"
         >
           View Profile
         </Button>
 
         {onLogoutClick && (
-          <IconButton
-            aria-label="Logout"
-            variant="outline"
-            colorScheme="teal"
-            size="sm"
+          <Button
             onClick={onLogoutClick}
-            icon={<NotAllowedIcon />}
-          />
+            colorScheme="red"
+            variant="outline"
+            size="sm"
+            w="full"
+            justifyContent="center"
+            borderRadius="md"
+            transition="all 0.2s ease"
+            _hover={{
+              bg: 'red.500',
+              color: 'white',
+              borderColor: 'red.500',
+              transform: 'translateY(-1px)',
+              boxShadow: '0 10px 20px rgba(239, 68, 68, 0.24)',
+            }}
+          >
+            Logout
+          </Button>
         )}
       </Stack>
     </Flex>

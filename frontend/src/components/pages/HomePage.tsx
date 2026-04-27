@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/auth.service';
 import { userService } from '../../services/user.service';
 import {
@@ -13,11 +13,12 @@ import SideNavbar from '../layout/SideNavbar';
 import Board from '../tasks/Board';
 import { AdminDashboard } from '../admin/AdminDashboard';
 import { UserRole } from '../../types/user';
-import { EmployeeDashboard } from '../employee/EmployeeDashboard';
+import { EmployeeDashboard, type EmployeeDashboardSection } from '../employee/EmployeeDashboard';
 import { TaskReminderToasts } from '../notifications/TaskReminderToasts';
 
 const HomePage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
 
@@ -52,6 +53,11 @@ const HomePage = () => {
   }
 
   const isAdmin = userRole === UserRole.ADMIN;
+  const section = new URLSearchParams(location.search).get('section');
+  const initialSection =
+    section === 'work-hub' || section === 'projects' || section === 'week' || section === 'alerts' || section === 'team'
+      ? (section as EmployeeDashboardSection)
+      : undefined;
 
   return (
     <Flex bg="var(--light-color)" w="100vw" minH="100vh">
@@ -61,7 +67,7 @@ const HomePage = () => {
           {isAdmin ? (
             <AdminDashboard isAdmin={true} />
           ) : (
-            <EmployeeDashboard />
+            <EmployeeDashboard initialSection={initialSection} />
           )}
         </Box>
       </Flex>

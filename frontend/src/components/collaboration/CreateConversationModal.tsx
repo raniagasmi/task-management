@@ -7,6 +7,7 @@ import {
   CheckboxGroup,
   FormControl,
   FormLabel,
+  Flex,
   Input,
   Modal,
   ModalBody,
@@ -21,6 +22,12 @@ import {
 } from '@chakra-ui/react';
 import { User } from '../../types/user';
 import { CreateConversationPayload } from '../../services/collaboration.service';
+
+const presenceMeta = {
+  ONLINE: { label: 'Online', colorScheme: 'green' },
+  PAUSE: { label: 'Away', colorScheme: 'yellow' },
+  OFFLINE: { label: 'Offline', colorScheme: 'gray' },
+} as const;
 
 interface CreateConversationModalProps {
   isOpen: boolean;
@@ -94,15 +101,25 @@ const CreateConversationModal = ({ isOpen, isLoading, users, onClose, onSubmit }
                 >
                   <Stack spacing={3}>
                     {users.map((user) => (
-                      <Checkbox key={user.id} value={user.id}>
-                        <Stack spacing={0} ml={2}>
-                          <Text fontWeight="600">
-                            {user.firstName} {user.lastName}
-                          </Text>
-                          <Text fontSize="sm" color="gray.500">
-                            {user.email}
-                          </Text>
-                        </Stack>
+                      <Checkbox key={user.id} value={user.id} w="full">
+                        <Flex justify="space-between" align="center" ml={2} w="full" gap={3}>
+                          <Stack spacing={0}>
+                            <Text fontWeight="600">
+                              {user.firstName} {user.lastName}
+                            </Text>
+                            <Text fontSize="sm" color="gray.500">
+                              {user.email}
+                            </Text>
+                          </Stack>
+                          <Badge
+                            colorScheme={presenceMeta[user.presenceStatus ?? 'OFFLINE'].colorScheme}
+                            borderRadius="full"
+                            px={2}
+                            py={0.5}
+                          >
+                            {presenceMeta[user.presenceStatus ?? 'OFFLINE'].label}
+                          </Badge>
+                        </Flex>
                       </Checkbox>
                     ))}
                   </Stack>

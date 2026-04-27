@@ -35,6 +35,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { taskService, UpdateTaskDto } from "../../services/task.service";
+import { collaborationService } from "../../services/collaboration.service";
 import { userService } from "../../services/user.service";
 import { Task as TaskType, TaskStatus, TaskPriority } from "../../types/task";
 import { UserRole } from "../../types/user";
@@ -43,6 +44,7 @@ import Task from "./Task";
 import { ArchiveZone } from "./ArchiveZone";
 import { DeleteZone } from "./DeleteZone";
 import { TaskSuccessAnimation } from "./TaskSuccessAnimation";
+import TaskActionPanel, { TaskActionComment, TaskDecision } from "./TaskActionPanel";
 import { statusOrder } from "./Task.constants";
 import { useTimeTracking } from "../../hooks/useAdminMetrics";
 interface BoardData {
@@ -54,9 +56,11 @@ interface BoardData {
 
 interface BoardProps {
   showControls?: boolean;
+  onTaskSelect?: (task: TaskType) => void;
+  showTaskActionPanel?: boolean;
 }
 
-export const Board: React.FC<BoardProps> = ({ showControls = true }) => {
+export const Board: React.FC<BoardProps> = ({ showControls = true, onTaskSelect, showTaskActionPanel = true }) => {
   const [boardData, setBoardData] = useState<BoardData>({
     TODO: [],
     IN_PROGRESS: [],
@@ -71,10 +75,58 @@ export const Board: React.FC<BoardProps> = ({ showControls = true }) => {
     show: boolean;
     title: string;
   }>({ show: false, title: "" });
+  const [selectedTask, setSelectedTask] = useState<TaskType | null>(null);
+  const [taskComments, setTaskComments] = useState<TaskActionComment[]>([]);
+  const [taskDecision, setTaskDecision] = useState<TaskDecision | null>(null);
   const { currentStatus, togglePause } = useTimeTracking(currentUserId);
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const actionPanel = useDisclosure();
   const [currentTask, setCurrentTask] = useState<Partial<TaskType> | null>(null);
   const toast = useToast();
+
+  const actionStorageKey = (taskId: string) => `task-action:${taskId}`;
+
+  const loadTaskActionState = (taskId: string) => {
+    if (typeof window === 'undefined') {
+      return {
+        comments: [] as TaskActionComment[],
+        decision: null as TaskDecision | null,
+      };
+    }
+
+    try {
+      const raw = window.localStorage.getItem(actionStorageKey(taskId));
+      if (!raw) {
+        return {
+          comments: [] as TaskActionComment[],
+          decision: null as TaskDecision | null,
+        };
+      }
+
+      const parsed = JSON.parse(raw) as {
+        comments?: TaskActionComment[];
+        decision?: TaskDecision | null;
+      };
+
+      return {
+        comments: Array.isArray(parsed.comments) ? parsed.comments : [],
+        decision: parsed.decision === 'accepted' || parsed.decision === 'declined' ? parsed.decision : null,
+      };
+    } catch {
+      return {
+        comments: [] as TaskActionComment[],
+        decision: null as TaskDecision | null,
+      };
+    }
+  };
+
+  const persistTaskActionState = (taskId: string, comments: TaskActionComment[], decision: TaskDecision | null) => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem(actionStorageKey(taskId), JSON.stringify({ comments, decision }));
+  };
 
   // Get current user info for role-based filtering
   useEffect(() => {
@@ -309,9 +361,90 @@ export const Board: React.FC<BoardProps> = ({ showControls = true }) => {
     onOpen();
   };
 
-  const handleEditTask = (task: TaskType) => {
-    setCurrentTask(task);
-    onOpen();
+  const handleTaskClick = (task: TaskType) => {
+    onTaskSelect?.(task);
+
+    if (showTaskActionPanel === false) {
+      return;
+    }
+
+    setSelectedTask(task);
+    const nextState = loadTaskActionState(task.id);
+    setTaskComments(nextState.comments);
+    setTaskDecision(nextState.decision);
+    actionPanel.onOpen();
+  };
+
+  const closeTaskActionPanel = () => {
+    actionPanel.onClose();
+    setSelectedTask(null);
+    setTaskComments([]);
+    setTaskDecision(null);
+  };
+
+  const sendLinkedConversationMessage = async (content: string) => {
+    if (!selectedTask?.conversationId) {
+      return;
+    }
+
+    try {
+      await collaborationService.sendMessage(selectedTask.conversationId, content);
+    } catch (error) {
+      console.error('Failed to share task note to collaboration thread:', error);
+      toast({
+        title: 'Saved locally',
+        description: 'The note could not be shared to the linked collaboration thread.',
+        status: 'warning',
+        duration: 3500,
+        isClosable: true,
+      });
+    }
+  };
+
+  const handleAddComment = async (content: string) => {
+    if (!selectedTask) {
+      return;
+    }
+
+    const nextComments = [
+      ...taskComments,
+      {
+        id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${taskComments.length}`,
+        content,
+        createdAt: new Date().toISOString(),
+      },
+    ];
+
+    setTaskComments(nextComments);
+    persistTaskActionState(selectedTask.id, nextComments, taskDecision);
+    await sendLinkedConversationMessage(`Task comment: ${content}`);
+    toast({
+      title: 'Comment added',
+      status: 'success',
+      duration: 2200,
+      isClosable: true,
+    });
+  };
+
+  const handleSetDecision = async (decision: TaskDecision) => {
+    if (!selectedTask) {
+      return;
+    }
+
+    setTaskDecision(decision);
+    persistTaskActionState(selectedTask.id, taskComments, decision);
+    await sendLinkedConversationMessage(
+      decision === 'accepted'
+        ? `Task accepted: ${selectedTask.title}`
+        : `Task declined: ${selectedTask.title}`,
+    );
+
+    toast({
+      title: decision === 'accepted' ? 'Task accepted' : 'Task declined',
+      status: decision === 'accepted' ? 'success' : 'info',
+      duration: 2200,
+      isClosable: true,
+    });
   };
 
   const handleDeleteTask = async (id: string) => {
@@ -513,7 +646,7 @@ export const Board: React.FC<BoardProps> = ({ showControls = true }) => {
               status={status}
               tasks={boardData[status]}
               onAddTask={handleAddTask}
-              onEditTask={handleEditTask}
+              onEditTask={handleTaskClick}
               onDeleteTask={handleDeleteTask}
             />
           ))}
@@ -522,13 +655,18 @@ export const Board: React.FC<BoardProps> = ({ showControls = true }) => {
           <Box>
             <ArchiveZone onArchive={handleArchiveTask} />
             <Flex justify="center" mt={2}>
-              <IconButton
-                aria-label={showArchivedTasks ? "Hide archived tasks" : "Show archived tasks"}
-                icon={showArchivedTasks ? <ViewOffIcon /> : <ViewIcon />}
+              <Button
                 onClick={() => setShowArchivedTasks((prev) => !prev)}
                 variant="outline"
                 colorScheme="orange"
                 size="sm"
+                leftIcon={showArchivedTasks ? <ViewOffIcon /> : <ViewIcon />}
+                px={4}
+                borderRadius="xl"
+                _hover={{
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 10px 20px rgba(249, 115, 22, 0.18)',
+                }}
               />
             </Flex>
             {showArchivedTasks && (
@@ -553,7 +691,7 @@ export const Board: React.FC<BoardProps> = ({ showControls = true }) => {
                     <Task
                       key={task.id}
                       task={task}
-                      onEdit={handleEditTask}
+                      onEdit={handleTaskClick}
                       onDelete={handleDeleteTask}
                     />
                   ))}
@@ -569,6 +707,19 @@ export const Board: React.FC<BoardProps> = ({ showControls = true }) => {
           <DeleteZone onDelete={handleDeleteTask} />
         </Flex>
       </DndContext>
+
+      {showTaskActionPanel !== false && (
+        <TaskActionPanel
+          isOpen={actionPanel.isOpen}
+          task={selectedTask}
+          comments={taskComments}
+          decision={taskDecision}
+          onClose={closeTaskActionPanel}
+          onAddComment={(content) => void handleAddComment(content)}
+          onAccept={() => void handleSetDecision('accepted')}
+          onDecline={() => void handleSetDecision('declined')}
+        />
+      )}
 
       {/* Task Edit/Create Modal */}
       <Modal isOpen={isOpen} onClose={onClose}>

@@ -1,8 +1,9 @@
 // src/components/tasks/dnd/ArchiveZone.tsx
-import { Box, Text, useColorModeValue, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, Button } from "@chakra-ui/react";
+import { Box, Icon, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, ModalOverlay, Button, Tooltip, useColorModeValue, useDisclosure } from "@chakra-ui/react";
 import { useDroppable } from "@dnd-kit/core";
 import { Task as TaskType } from "../../types/task";
 import { useState } from "react";
+import { Archive } from 'lucide-react';
 
 interface ArchiveZoneProps {
   onArchive: (id: string) => Promise<void>;
@@ -30,24 +31,31 @@ export const ArchiveZone: React.FC<ArchiveZoneProps> = ({ onArchive }) => {
 
   return (
     <>
-      <Box
-        ref={setNodeRef}
-        p={4}
-        m={4}
-        borderRadius="md"
-        bg={isOver ? activeBgColor : bgColor}
-        border="2px dashed"
-        borderColor="orange.500"
-        textAlign="center"
-        onDrop={(e) => {
-          const task = JSON.parse(e.dataTransfer.getData("application/json")) as TaskType;
-          handleDrop(task);
-        }}
-      >
-        <Text fontWeight="bold" color="orange.500">
-          Drop here to archive task
-        </Text>
-      </Box>
+      <Tooltip label="Archive task" hasArrow>
+        <Box
+          ref={setNodeRef}
+          p={1}
+          m={4}
+          minW="56px"
+          minH="56px"
+          borderRadius="xl"
+          bg={isOver ? activeBgColor : bgColor}
+          border="1px solid"
+          borderColor={isOver ? 'orange.300' : 'orange.200'}
+          display="inline-flex"
+          alignItems="center"
+          justifyContent="center"
+          boxShadow={isOver ? '0 12px 24px rgba(249, 115, 22, 0.16)' : 'sm'}
+          transition="all 0.2s ease"
+          onDrop={(e) => {
+            const task = JSON.parse(e.dataTransfer.getData("application/json")) as TaskType;
+            handleDrop(task);
+          }}
+          _hover={{ transform: 'translateY(-1px)' }}
+        >
+          <Icon as={Archive} boxSize={5} color="orange.500" />
+        </Box>
+      </Tooltip>
 
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />

@@ -9,6 +9,10 @@ import {
   Heading,
   IconButton,
   Input,
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuList,
   Spinner,
   Stack,
   Text,
@@ -29,6 +33,8 @@ interface ChatWindowProps {
   isSending: boolean;
   isAiThinking: boolean;
   typingLabel?: string;
+  isFollowingThread: boolean;
+  onToggleFollowThread: () => void;
   onSendMessage: (content: string) => void;
   onStartTyping: () => void;
   onStopTyping: () => void;
@@ -48,6 +54,8 @@ const ChatWindow = ({
   isSending,
   isAiThinking,
   typingLabel,
+  isFollowingThread,
+  onToggleFollowThread,
   onSendMessage,
   onStartTyping,
   onStopTyping,
@@ -57,12 +65,32 @@ const ChatWindow = ({
   onManualAIGeneration,
 }: ChatWindowProps) => {
   const [draft, setDraft] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const typingTimeoutRef = useRef<number | null>(null);
 
+  const savedReplies = [
+    'Thanks, I will review this now.',
+    'Looks good to me. Please proceed.',
+    'Can you share a little more context on the timeline?',
+    'I will follow up after I check the dependencies.',
+  ];
+
+  const presenceColor = (status?: string) => {
+    if (status === 'ONLINE') {
+      return 'green.400';
+    }
+
+    if (status === 'PAUSE') {
+      return 'yellow.400';
+    }
+
+    return 'gray.400';
+  };
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-  }, [messages, proposals, isAiThinking, typingLabel]);
+  }, [messages, proposals, isAiThinking, typingLabel, searchQuery]);
 
   useEffect(() => () => {
     if (typingTimeoutRef.current) {
@@ -79,6 +107,33 @@ const ChatWindow = ({
     return conversation.title;
   }, [conversation]);
 
+  const filteredMessages = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) {
+      return messages;
+    }
+
+    return messages.filter((message) => {
+      const sender = usersById[message.senderId] ?? message.sender;
+      const senderLabel =
+        message.senderType === 'AI'
+          ? 'AI'
+          : message.senderType === 'SYSTEM'
+            ? 'System'
+            : sender
+              ? `${sender.firstName} ${sender.lastName}`
+              : message.sender?.fullName ?? message.senderId;
+
+      return [message.content, senderLabel, message.senderId, message.sender?.fullName ?? '']
+        .filter(Boolean)
+        .some((value) => value.toLowerCase().includes(query));
+    });
+  }, [messages, searchQuery, usersById]);
+
+  const toggleReply = (reply: string) => {
+    setDraft((current) => (current ? `${current}\n${reply}` : reply));
+  };
+
   const handleSend = () => {
     const content = draft.trim();
     if (!content) {
@@ -94,7 +149,7 @@ const ChatWindow = ({
     <Flex direction="column" h="100%" bg="white" borderRadius="3xl" boxShadow="0 18px 45px rgba(15, 23, 42, 0.08)" overflow="hidden">
       <Box px={6} py={5} borderBottom="1px solid" borderColor="gray.100" bg="linear-gradient(135deg, rgba(15,23,42,0.98), rgba(15,118,110,0.88))" color="white">
         <Flex justify="space-between" align="center" gap={4} wrap="wrap">
-          <Box>
+          <Box flex={1} minW={{ base: 'full', md: 'auto' }}>
             <Badge colorScheme="teal" borderRadius="full" px={3} py={1} mb={2}>
               CollaborationChat
             </Badge>
@@ -106,30 +161,68 @@ const ChatWindow = ({
             </Text>
           </Box>
 
-          {conversation && (
-            <HStack spacing={2}>
-              {conversation.participants?.slice(0, 3).map((participant) => {
-                const user = usersById[participant.userId] ?? participant.user;
-                return (
-                  <Badge key={participant.userId} bg="whiteAlpha.200" color="white" borderRadius="full" px={3} py={1}>
-                    {user ? `${user.firstName} ${user.lastName}` : participant.fullName ?? participant.role}
-                  </Badge>
-                );
-              })}
+          <Stack spacing={3} minW={{ base: 'full', md: '340px' }} align={{ base: 'stretch', md: 'flex-end' }}>
+            <Input
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search messages"
+              bg="whiteAlpha.200"
+              borderColor="whiteAlpha.300"
+              color="white"
+              _placeholder={{ color: 'whiteAlpha.700' }}
+            />
+            <HStack spacing={2} justify="flex-end" wrap="wrap">
+              {conversation && (
+                <Button
+                  size="sm"
+                  variant={isFollowingThread ? 'solid' : 'outline'}
+                  colorScheme="teal"
+                  onClick={onToggleFollowThread}
+                >
+                  {isFollowingThread ? 'Following thread' : 'Follow thread'}
+                </Button>
+              )}
+              {isFollowingThread && (
+                <Badge bg="whiteAlpha.200" color="white" borderRadius="full" px={3} py={1}>
+                  Following
+                </Badge>
+              )}
             </HStack>
-          )}
+          </Stack>
         </Flex>
+
+        {conversation && (
+          <HStack spacing={2} mt={4} wrap="wrap">
+            {conversation.participants?.slice(0, 3).map((participant) => {
+              const user = usersById[participant.userId] ?? participant.user;
+              const presenceStatus = user?.presenceStatus ?? 'OFFLINE';
+
+              return (
+                <Badge key={participant.userId} bg="whiteAlpha.200" color="white" borderRadius="full" px={3} py={1}>
+                  <HStack spacing={2}>
+                    <Box w="2" h="2" borderRadius="full" bg={presenceColor(presenceStatus)} />
+                    <Text as="span">
+                      {user ? `${user.firstName} ${user.lastName}` : participant.fullName ?? participant.role}
+                    </Text>
+                  </HStack>
+                </Badge>
+              );
+            })}
+          </HStack>
+        )}
       </Box>
 
       <Flex flex={1} direction="column" minH={0}>
         <Box ref={scrollRef} flex={1} overflowY="auto" px={6} py={5} bg="linear-gradient(180deg, #fbfdff 0%, #f4f8fb 100%)">
           <Stack spacing={4}>
-            {messages.length === 0 ? (
+            {filteredMessages.length === 0 ? (
               <Box borderWidth="1px" borderColor="gray.100" borderRadius="2xl" p={6} bg="white">
-                <Text color="gray.500">No messages yet. Start the conversation or generate AI tasks.</Text>
+                <Text color="gray.500">
+                  {searchQuery ? 'No messages match your search.' : 'No messages yet. Start the conversation or generate AI tasks.'}
+                </Text>
               </Box>
             ) : (
-              messages.map((message) => {
+              filteredMessages.map((message) => {
                 const sender = usersById[message.senderId] ?? message.sender;
                 const senderLabel =
                   message.senderType === 'AI'
@@ -240,6 +333,24 @@ const ChatWindow = ({
         <Divider />
 
         <Box px={6} py={5} bg="white">
+          <Flex justify="space-between" align="center" gap={3} wrap="wrap" mb={3}>
+            <Text fontSize="sm" color="gray.500">
+              {filteredMessages.length} of {messages.length} messages shown
+            </Text>
+            <Menu>
+              <MenuButton as={Button} size="sm" variant="outline" colorScheme="teal">
+                Saved replies
+              </MenuButton>
+              <MenuList>
+                {savedReplies.map((reply) => (
+                  <MenuItem key={reply} onClick={() => toggleReply(reply)}>
+                    {reply}
+                  </MenuItem>
+                ))}
+              </MenuList>
+            </Menu>
+          </Flex>
+
           <Stack direction={{ base: 'column', md: 'row' }} spacing={3}>
             <Input
               value={draft}

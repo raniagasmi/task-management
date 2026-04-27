@@ -6,6 +6,7 @@ type ConversationPreferences = {
   muted: string[];
   archived: string[];
   deleted: string[];
+  followed: string[];
 };
 
 interface ConversationListProps {
@@ -13,7 +14,7 @@ interface ConversationListProps {
   preferences: ConversationPreferences;
   selectedConversationId: string;
   onSelectConversation: (conversation: CollaborationConversation) => void;
-  onAction: (action: 'pin' | 'mute' | 'archive' | 'delete', conversation: CollaborationConversation) => void;
+  onAction: (action: 'pin' | 'mute' | 'archive' | 'delete' | 'follow' | 'unfollow', conversation: CollaborationConversation) => void;
 }
 
 const formatPreview = (value?: string) => {
@@ -48,6 +49,7 @@ const ConversationList = ({
           const isSelected = conversationId === selectedConversationId;
           const isPinned = preferences.pinned.includes(conversationId);
           const isMuted = preferences.muted.includes(conversationId);
+          const isFollowed = preferences.followed.includes(conversationId);
 
           return (
             <Box
@@ -58,15 +60,16 @@ const ConversationList = ({
               p={4}
               bg={isSelected ? 'rgba(13,148,136,0.12)' : 'whiteAlpha.800'}
               borderWidth="1px"
-              borderColor={isSelected ? 'teal.300' : 'whiteAlpha.500'}
+              borderColor={isSelected ? 'teal.300' : isFollowed ? 'blue.200' : 'whiteAlpha.500'}
               boxShadow={isSelected ? '0 12px 28px rgba(15, 23, 42, 0.12)' : 'sm'}
               transition="all 0.2s ease"
-              _hover={{ transform: 'translateY(-1px)', borderColor: 'teal.200' }}
+              _hover={{ transform: 'translateY(-1px)', borderColor: isFollowed ? 'blue.300' : 'teal.200' }}
             >
               <Flex justify="space-between" align="flex-start" gap={3}>
                 <Box>
                   <Flex align="center" gap={2}>
                     {isPinned && <Badge colorScheme="purple">Pinned</Badge>}
+                    {isFollowed && <Badge colorScheme="blue">Following</Badge>}
                     {isMuted && <Badge colorScheme="gray">Muted</Badge>}
                     <Text fontWeight="700" color="#0f172a" noOfLines={1}>
                       {conversation.title}
@@ -95,6 +98,9 @@ const ConversationList = ({
                     <MenuList onClick={(event) => event.stopPropagation()}>
                       <MenuItem onClick={() => onAction('pin', conversation)}>
                         {isPinned ? 'Unpin conversation' : 'Pin conversation'}
+                      </MenuItem>
+                      <MenuItem onClick={() => onAction(isFollowed ? 'unfollow' : 'follow', conversation)}>
+                        {isFollowed ? 'Unfollow thread' : 'Follow thread'}
                       </MenuItem>
                       <MenuItem onClick={() => onAction('mute', conversation)}>
                         {isMuted ? 'Unmute conversation' : 'Mute conversation'}

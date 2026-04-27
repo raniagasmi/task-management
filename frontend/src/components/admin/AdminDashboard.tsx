@@ -280,7 +280,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isAdmin }) => {
 
           {/* Task Board Tab */}
           <TabPanel>
-            <Board showControls={false} />
+            <Board showControls={false} showTaskActionPanel={false} />
           </TabPanel>
         </TabPanels>
       </Tabs>

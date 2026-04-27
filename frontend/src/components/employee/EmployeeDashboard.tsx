@@ -23,6 +23,8 @@ import {
   Th,
   Tbody,
   Td,
+  useDisclosure,
+  useToast,
 } from '@chakra-ui/react';
 import { RepeatIcon } from '@chakra-ui/icons';
 import { dashboardService } from '../../services/dashboard.service';
@@ -31,14 +33,69 @@ import { AlertsPanel } from '../admin/AlertsPanel';
 import { Board } from '../tasks/Board';
 import { authService } from '../../services/auth.service';
 import { useTimeTracking } from '../../hooks/useAdminMetrics';
+import MyWeekCalendar from './MyWeekCalendar';
+import { collaborationService } from '../../services/collaboration.service';
+import TaskActionPanel, { TaskActionComment, TaskDecision } from '../tasks/TaskActionPanel';
+import { Task as TaskType } from '../../types/task';
 
-export const EmployeeDashboard = () => {
+export type EmployeeDashboardSection = 'work-hub' | 'projects' | 'week' | 'alerts' | 'team';
+
+interface EmployeeDashboardProps {
+  initialSection?: EmployeeDashboardSection;
+}
+
+const sectionToTabIndex: Record<EmployeeDashboardSection, number> = {
+  'work-hub': 0,
+  projects: 1,
+  week: 2,
+  alerts: 3,
+  team: 4,
+};
+
+export const EmployeeDashboard = ({ initialSection = 'work-hub' }: EmployeeDashboardProps) => {
   const currentUserId = authService.getCurrentUser()?.id;
   const { currentStatus, togglePause } = useTimeTracking(currentUserId);
+  const toast = useToast();
+  const actionPanel = useDisclosure();
 
   const [data, setData] = useState<EmployeeDashboardResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
+  const [tabIndex, setTabIndex] = useState(sectionToTabIndex[initialSection]);
+  const [selectedTask, setSelectedTask] = useState<TaskType | null>(null);
+  const [taskComments, setTaskComments] = useState<TaskActionComment[]>([]);
+  const [taskDecision, setTaskDecision] = useState<TaskDecision | null>(null);
+
+  const actionStorageKey = (taskId: string) => `task-action:${taskId}`;
+
+  const loadTaskActionState = (taskId: string) => {
+    if (typeof window === 'undefined') {
+      return { comments: [] as TaskActionComment[], decision: null as TaskDecision | null };
+    }
+
+    try {
+      const raw = window.localStorage.getItem(actionStorageKey(taskId));
+      if (!raw) {
+        return { comments: [] as TaskActionComment[], decision: null as TaskDecision | null };
+      }
+
+      const parsed = JSON.parse(raw) as { comments?: TaskActionComment[]; decision?: TaskDecision | null };
+      return {
+        comments: Array.isArray(parsed.comments) ? parsed.comments : [],
+        decision: parsed.decision === 'accepted' || parsed.decision === 'declined' ? parsed.decision : null,
+      };
+    } catch {
+      return { comments: [] as TaskActionComment[], decision: null as TaskDecision | null };
+    }
+  };
+
+  const persistTaskActionState = (taskId: string, comments: TaskActionComment[], decision: TaskDecision | null) => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem(actionStorageKey(taskId), JSON.stringify({ comments, decision }));
+  };
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -56,6 +113,90 @@ export const EmployeeDashboard = () => {
   useEffect(() => {
     void fetchData();
   }, []);
+
+  useEffect(() => {
+    setTabIndex(sectionToTabIndex[initialSection]);
+  }, [initialSection]);
+
+  const handleTaskSelect = (task: TaskType) => {
+    setSelectedTask(task);
+    const nextState = loadTaskActionState(task.id);
+    setTaskComments(nextState.comments);
+    setTaskDecision(nextState.decision);
+    actionPanel.onOpen();
+  };
+
+  const closeTaskActionPanel = () => {
+    actionPanel.onClose();
+    setSelectedTask(null);
+    setTaskComments([]);
+    setTaskDecision(null);
+  };
+
+  const sendLinkedConversationMessage = async (content: string) => {
+    if (!selectedTask?.conversationId) {
+      return;
+    }
+
+    try {
+      await collaborationService.sendMessage(selectedTask.conversationId, content);
+    } catch (error) {
+      console.error('Failed to share task note to collaboration thread:', error);
+      toast({
+        title: 'Saved locally',
+        description: 'The note could not be shared to the linked collaboration thread.',
+        status: 'warning',
+        duration: 3500,
+        isClosable: true,
+      });
+    }
+  };
+
+  const handleAddComment = async (content: string) => {
+    if (!selectedTask) {
+      return;
+    }
+
+    const nextComments = [
+      ...taskComments,
+      {
+        id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${taskComments.length}`,
+        content,
+        createdAt: new Date().toISOString(),
+      },
+    ];
+
+    setTaskComments(nextComments);
+    persistTaskActionState(selectedTask.id, nextComments, taskDecision);
+    await sendLinkedConversationMessage(`Task comment: ${content}`);
+    toast({
+      title: 'Comment added',
+      status: 'success',
+      duration: 2200,
+      isClosable: true,
+    });
+  };
+
+  const handleSetDecision = async (decision: TaskDecision) => {
+    if (!selectedTask) {
+      return;
+    }
+
+    setTaskDecision(decision);
+    persistTaskActionState(selectedTask.id, taskComments, decision);
+    await sendLinkedConversationMessage(
+      decision === 'accepted'
+        ? `Task accepted: ${selectedTask.title}`
+        : `Task declined: ${selectedTask.title}`,
+    );
+
+    toast({
+      title: decision === 'accepted' ? 'Task accepted' : 'Task declined',
+      status: decision === 'accepted' ? 'success' : 'info',
+      duration: 2200,
+      isClosable: true,
+    });
+  };
 
   if (error) {
     return (
@@ -102,10 +243,11 @@ export const EmployeeDashboard = () => {
       )}
 
       {!isLoading && data && (
-        <Tabs colorScheme="blue" isLazy>
+        <Tabs colorScheme="blue" isLazy index={tabIndex} onChange={setTabIndex}>
           <TabList mb={4}>
-            <Tab>Employees</Tab>
-            <Tab>Projects</Tab>
+            <Tab>My Work Hub</Tab>
+            <Tab>My Projects</Tab>
+            <Tab>My Week</Tab>
             <Tab>
               Alerts
               {data.alerts.filter((a) => !a.isResolved).length > 0 && (
@@ -114,32 +256,12 @@ export const EmployeeDashboard = () => {
                 </Badge>
               )}
             </Tab>
-            <Tab>Task Board</Tab>
+            <Tab>Team</Tab>
           </TabList>
 
           <TabPanels>
             <TabPanel>
-              <Box bg="white" borderRadius="lg" p={4} boxShadow="sm">
-                <Heading size="md" mb={3}>
-                  Same-Project Directory
-                </Heading>
-                <Table size="sm">
-                  <Thead>
-                    <Tr>
-                      <Th>Name</Th>
-                      <Th>Email</Th>
-                    </Tr>
-                  </Thead>
-                  <Tbody>
-                    {data.employees.map((emp) => (
-                      <Tr key={emp.id}>
-                        <Td>{emp.name}</Td>
-                        <Td>{emp.email || '-'}</Td>
-                      </Tr>
-                    ))}
-                  </Tbody>
-                </Table>
-              </Box>
+              <Board showControls={false} showTaskActionPanel={false} onTaskSelect={handleTaskSelect} />
             </TabPanel>
 
             <TabPanel>
@@ -159,15 +281,50 @@ export const EmployeeDashboard = () => {
             </TabPanel>
 
             <TabPanel>
+              <MyWeekCalendar tasks={data.tasks} onTaskSelect={handleTaskSelect} />
+            </TabPanel>
+
+            <TabPanel>
               <AlertsPanel alerts={data.alerts} />
             </TabPanel>
 
             <TabPanel>
-              <Board showControls={false} />
+              <Box bg="white" borderRadius="lg" p={4} boxShadow="sm">
+                <Heading size="md" mb={3}>
+                  Team directory
+                </Heading>
+                <Table size="sm">
+                  <Thead>
+                    <Tr>
+                      <Th>Name</Th>
+                      <Th>Email</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {data.employees.map((emp) => (
+                      <Tr key={emp.id}>
+                        <Td>{emp.name}</Td>
+                        <Td>{emp.email || '-'}</Td>
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
+              </Box>
             </TabPanel>
           </TabPanels>
         </Tabs>
       )}
+
+      <TaskActionPanel
+        isOpen={actionPanel.isOpen}
+        task={selectedTask}
+        comments={taskComments}
+        decision={taskDecision}
+        onClose={closeTaskActionPanel}
+        onAddComment={(content) => void handleAddComment(content)}
+        onAccept={() => void handleSetDecision('accepted')}
+        onDecline={() => void handleSetDecision('declined')}
+      />
     </Box>
   );
 };

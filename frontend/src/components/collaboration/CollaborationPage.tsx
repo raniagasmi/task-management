@@ -45,6 +45,7 @@ type ConversationPreferences = {
   muted: string[];
   archived: string[];
   deleted: string[];
+  followed: string[];
 };
 
 const emptyPreferences = (): ConversationPreferences => ({
@@ -52,6 +53,7 @@ const emptyPreferences = (): ConversationPreferences => ({
   muted: [],
   archived: [],
   deleted: [],
+  followed: [],
 });
 
 const preferenceKey = (userId?: string) => `collaboration:preferences:${userId ?? 'anonymous'}`;
@@ -83,7 +85,7 @@ const CollaborationPage = () => {
   useEffect(() => {
     try {
       const stored = localStorage.getItem(preferenceKey(currentUser?.id));
-      setConversationPreferences(stored ? JSON.parse(stored) as ConversationPreferences : emptyPreferences());
+      setConversationPreferences(stored ? { ...emptyPreferences(), ...(JSON.parse(stored) as Partial<ConversationPreferences>) } : emptyPreferences());
     } catch {
       setConversationPreferences(emptyPreferences());
     }
@@ -400,9 +402,15 @@ const CollaborationPage = () => {
           return rightPinned - leftPinned;
         }
 
+        const leftFollowed = conversationPreferences.followed.includes(leftId) ? 1 : 0;
+        const rightFollowed = conversationPreferences.followed.includes(rightId) ? 1 : 0;
+        if (leftFollowed !== rightFollowed) {
+          return rightFollowed - leftFollowed;
+        }
+
         return new Date(right.lastMessageAt ?? 0).getTime() - new Date(left.lastMessageAt ?? 0).getTime();
       });
-  }, [conversationPreferences.archived, conversationPreferences.deleted, conversationPreferences.pinned, conversations, showArchivedConversations]);
+  }, [conversationPreferences.archived, conversationPreferences.deleted, conversationPreferences.followed, conversationPreferences.pinned, conversations, showArchivedConversations]);
 
   const archivedConversationCount = useMemo(
     () => conversations.filter((conversation) => conversationPreferences.archived.includes(toConversationId(conversation))).length,
@@ -447,7 +455,7 @@ const CollaborationPage = () => {
   };
 
   const handleConversationAction = (
-    action: 'pin' | 'mute' | 'archive' | 'delete',
+    action: 'pin' | 'mute' | 'archive' | 'delete' | 'follow' | 'unfollow',
     conversation: CollaborationConversation,
   ) => {
     const conversationId = toConversationId(conversation);
@@ -462,8 +470,15 @@ const CollaborationPage = () => {
           ? 'muted'
           : action === 'archive'
             ? 'archived'
-            : 'deleted';
-    updateConversationPreference(key, conversationId);
+            : action === 'follow' || action === 'unfollow'
+              ? 'followed'
+              : 'deleted';
+
+    if (action === 'follow' || action === 'unfollow') {
+      updateConversationPreference(key, conversationId, action === 'follow');
+    } else {
+      updateConversationPreference(key, conversationId);
+    }
 
     if ((action === 'archive' || action === 'delete') && selectedConversationId === conversationId) {
       setSelectedConversationId('');
@@ -804,6 +819,13 @@ const CollaborationPage = () => {
                 isSending={isSending}
                 isAiThinking={isAiThinking}
                 typingLabel={typingLabel}
+                isFollowingThread={selectedConversationId ? conversationPreferences.followed.includes(selectedConversationId) : false}
+                onToggleFollowThread={() => {
+                  if (selectedConversationId) {
+                    const shouldFollow = !conversationPreferences.followed.includes(selectedConversationId);
+                    updateConversationPreference('followed', selectedConversationId, shouldFollow);
+                  }
+                }}
                 onSendMessage={handleSendMessage}
                 onStartTyping={handleStartTyping}
                 onStopTyping={handleStopTyping}
