@@ -42,19 +42,19 @@ const SideNavbar = ({ onLogoutClick }: SideNavbarProps) => {
 
   const employeeNavItems = [
     {
-      label: 'My Work Hub',
+      label: 'Tasks',
       isActive: location.pathname === '/app' && currentSection === 'work-hub',
       onClick: () => navigate('/app'),
     },
     {
-      label: 'My Projects',
+      label: 'Projects',
       isActive: location.pathname === '/app' && currentSection === 'projects',
       onClick: () => navigate('/app?section=projects'),
     },
     {
-      label: 'My Week',
-      isActive: location.pathname === '/app' && currentSection === 'week',
-      onClick: () => navigate('/app?section=week'),
+      label: 'Calendar',
+      isActive: location.pathname === '/app' && currentSection === 'calendar',
+      onClick: () => navigate('/app?section=calendar'),
     },
     {
       label: 'Collaboration',
