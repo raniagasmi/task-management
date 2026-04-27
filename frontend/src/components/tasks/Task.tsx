@@ -24,7 +24,7 @@ interface TaskProps {
   onDelete: (id: string) => void;
 }
 
-const Task: React.FC<TaskProps> = ({ task, onEdit }) => {
+const Task: React.FC<TaskProps> = ({ task }) => {
   const {
     attributes,
     listeners,
@@ -51,7 +51,6 @@ const Task: React.FC<TaskProps> = ({ task, onEdit }) => {
     ? `${task.assignedToUser.firstName ?? ""} ${task.assignedToUser.lastName ?? ""}`.trim()
     : "";
   const assigneeLabel = assigneeName || (task.assignedTo ? "Unknown Employee" : "Unassigned");
-  const assigneePresence = task.assignedToUser?.presenceStatus ?? "OFFLINE";
 
 
   return (
@@ -62,11 +61,6 @@ const Task: React.FC<TaskProps> = ({ task, onEdit }) => {
       {...listeners}
       mb={2}
       role="group"
-      onClick={() => {
-        if (!isDragging) {
-          onEdit(task);
-        }
-      }}
     >
       <Card
         bg="var(--light-color)"
@@ -92,11 +86,6 @@ const Task: React.FC<TaskProps> = ({ task, onEdit }) => {
                 </Text>
               </Tooltip>
             )}
-            {task.rationale && (
-              <Text fontSize="xs" color="teal.600" noOfLines={2}>
-                Why this task: {task.rationale}
-              </Text>
-            )}
             <Flex justify="space-between" align="center" fontSize="sm">
               <Flex align="center" gap={2}>
                 <Badge colorScheme={priorityColors[task.priority]} variant="subtle">
@@ -110,7 +99,7 @@ const Task: React.FC<TaskProps> = ({ task, onEdit }) => {
                   </Tooltip>
                 )}
               </Flex>
-              <Tooltip label={`Assigned to: ${assigneeLabel} • ${assigneePresence}`}>
+              <Tooltip label={`Assigned to: ${assigneeLabel}`}>
                 <Avatar name={assigneeLabel} size="xs" />
               </Tooltip>
             </Flex>

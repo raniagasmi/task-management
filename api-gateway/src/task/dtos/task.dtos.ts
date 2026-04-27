@@ -19,12 +19,6 @@ export enum TaskPriority {
   HIGH = 'HIGH',
 }
 
-export enum TaskDecisionStatus {
-  PENDING = 'PENDING',
-  ACCEPTED = 'ACCEPTED',
-  DECLINED = 'DECLINED',
-}
-
 export class CreateTaskDto {
   @IsString()
   @IsNotEmpty()
@@ -49,26 +43,6 @@ export class CreateTaskDto {
   @IsNumber()
   @IsOptional()
   order?: number;
-
-  @IsString()
-  @IsOptional()
-  rationale?: string;
-
-  @IsEnum(TaskDecisionStatus)
-  @IsOptional()
-  decisionStatus?: TaskDecisionStatus;
-
-  @IsString()
-  @IsOptional()
-  blockerNote?: string;
-
-  @IsString()
-  @IsOptional()
-  employeeComment?: string;
-
-  @IsNumber()
-  @IsOptional()
-  estimatedHours?: number;
 }
 
 export class UpdateTaskDto {
@@ -95,26 +69,6 @@ export class UpdateTaskDto {
   @IsNumber()
   @IsOptional()
   order?: number;
-
-  @IsString()
-  @IsOptional()
-  rationale?: string;
-
-  @IsEnum(TaskDecisionStatus)
-  @IsOptional()
-  decisionStatus?: TaskDecisionStatus;
-
-  @IsString()
-  @IsOptional()
-  blockerNote?: string;
-
-  @IsString()
-  @IsOptional()
-  employeeComment?: string;
-
-  @IsNumber()
-  @IsOptional()
-  estimatedHours?: number;
 }
 
 export class UpdateStatusDto {

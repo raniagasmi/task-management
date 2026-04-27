@@ -1,5 +1,5 @@
 import api from './api.service';
-import { Task, TaskStatus, TaskPriority, TaskDecisionStatus } from '../types/task';
+import { Task, TaskStatus, TaskPriority } from '../types/task';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../config/api.config';
 
@@ -11,11 +11,7 @@ interface CreateTaskDto {
   assignedTo?: string;
   order: number;
   dueDate?: Date;
-  rationale?: string;
-  decisionStatus?: TaskDecisionStatus;
-  blockerNote?: string;
-  employeeComment?: string;
-  estimatedHours?: number;
+ 
 }
 
 interface UpdateTaskDto {
@@ -29,11 +25,6 @@ interface UpdateTaskDto {
   active?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
-  rationale?: string;
-  decisionStatus?: TaskDecisionStatus;
-  blockerNote?: string;
-  employeeComment?: string;
-  estimatedHours?: number;
 }
 
 class TaskService {

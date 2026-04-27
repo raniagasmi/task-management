@@ -16,6 +16,8 @@ import {
 import { ClientProxy } from '@nestjs/microservices';
 import { Inject } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 import {
   CreateTaskDto,
   CreateTaskReminderDto,
@@ -39,7 +41,7 @@ export class TaskController {
       new Set((tasks ?? []).map((t) => String((t as any)?.assignedTo ?? '')).filter(Boolean)),
     );
 
-    const usersById = new Map<string, { firstName: string; lastName: string; email?: string; presenceStatus?: string }>();
+    const usersById = new Map<string, { firstName: string; lastName: string; email?: string }>();
     await Promise.all(
       ids.map(async (id) => {
         try {
@@ -49,7 +51,6 @@ export class TaskController {
               firstName: String((user as any).firstName ?? ''),
               lastName: String((user as any).lastName ?? ''),
               email: (user as any).email,
-              presenceStatus: (user as any).presenceStatus,
             });
           }
         } catch {
@@ -170,45 +171,12 @@ export class TaskController {
 
   @Put(':id')
   @UsePipes(new ValidationPipe())
+  @UseGuards(RolesGuard)
+  @Roles('admin')
   async update(
     @Param('id') id: string,
     @Body() updateTaskDto: UpdateTaskDto,
-    @Request() req: { user: { userId?: string; role?: string } },
   ): Promise<Task> {
-    const userId = req.user?.userId;
-    if (!userId) {
-      throw new UnauthorizedException('User not authenticated');
-    }
-
-    const role = (req.user?.role ?? '').toLowerCase();
-    const existingTask = await this.taskClient
-      .send<Task>({ cmd: 'findOneTask' }, id)
-      .toPromise();
-
-    if (!existingTask) {
-      throw new Error(`Task with id ${id} not found`);
-    }
-
-    const isPrivileged = role === 'admin';
-    const isTaskParticipant =
-      String((existingTask as any).assignedTo ?? '') === userId ||
-      String((existingTask as any).createdBy ?? '') === userId;
-
-    if (!isPrivileged && !isTaskParticipant) {
-      throw new ForbiddenException('Access denied');
-    }
-
-    if (!isPrivileged) {
-      const forbiddenFields = ['assignedTo'];
-      const attemptedPrivilegedUpdate = forbiddenFields.some(
-        (field) => field in updateTaskDto && typeof (updateTaskDto as Record<string, unknown>)[field] !== 'undefined',
-      );
-
-      if (attemptedPrivilegedUpdate) {
-        throw new ForbiddenException('You cannot change assignee details for this task');
-      }
-    }
-
     const task = await this.taskClient
       .send<Task>({ cmd: 'updateTask' }, { id, updateTaskDto })
       .toPromise();

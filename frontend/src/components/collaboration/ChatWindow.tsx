@@ -9,21 +9,15 @@ import {
   Heading,
   IconButton,
   Input,
-  Menu,
-  MenuButton,
-  MenuItem,
-  MenuList,
   Spinner,
   Stack,
   Text,
-  Tooltip,
 } from '@chakra-ui/react';
-import { ArrowForwardIcon, ChevronDownIcon, RepeatIcon, SearchIcon, StarIcon } from '@chakra-ui/icons';
+import { ArrowForwardIcon, RepeatIcon } from '@chakra-ui/icons';
 import { CollaborationConversation, CollaborationMessage, CollaborationTaskProposal } from '../../services/collaboration.service';
 import MessageBubble from './MessageBubble';
 import TaskProposalCard from './TaskProposalCard';
 import { User } from '../../types/user';
-import { AvailabilityBadge } from '../shared/AvailabilityBadge';
 
 interface ChatWindowProps {
   conversation?: CollaborationConversation | null;
@@ -35,8 +29,6 @@ interface ChatWindowProps {
   isSending: boolean;
   isAiThinking: boolean;
   typingLabel?: string;
-  savedReplies: string[];
-  isFollowingThread: boolean;
   onSendMessage: (content: string) => void;
   onStartTyping: () => void;
   onStopTyping: () => void;
@@ -44,7 +36,6 @@ interface ChatWindowProps {
   onApproveProposal: (proposal: CollaborationTaskProposal) => void;
   onRejectProposal: (proposal: CollaborationTaskProposal) => void;
   onManualAIGeneration: () => void;
-  onToggleFollowThread: () => void;
 }
 
 const ChatWindow = ({
@@ -57,8 +48,6 @@ const ChatWindow = ({
   isSending,
   isAiThinking,
   typingLabel,
-  savedReplies,
-  isFollowingThread,
   onSendMessage,
   onStartTyping,
   onStopTyping,
@@ -66,10 +55,8 @@ const ChatWindow = ({
   onApproveProposal,
   onRejectProposal,
   onManualAIGeneration,
-  onToggleFollowThread,
 }: ChatWindowProps) => {
   const [draft, setDraft] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const typingTimeoutRef = useRef<number | null>(null);
 
@@ -91,23 +78,6 @@ const ChatWindow = ({
 
     return conversation.title;
   }, [conversation]);
-
-  const filteredMessages = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-    if (!query) {
-      return messages;
-    }
-
-    return messages.filter((message) => {
-      const sender = usersById[message.senderId] ?? message.sender;
-      const senderName = sender ? `${sender.firstName} ${sender.lastName}`.toLowerCase() : '';
-      return (
-        message.content.toLowerCase().includes(query) ||
-        senderName.includes(query) ||
-        (message.metadata?.taskTitle ?? '').toLowerCase().includes(query)
-      );
-    });
-  }, [messages, searchTerm, usersById]);
 
   const handleSend = () => {
     const content = draft.trim();
@@ -141,28 +111,11 @@ const ChatWindow = ({
               {conversation.participants?.slice(0, 3).map((participant) => {
                 const user = usersById[participant.userId] ?? participant.user;
                 return (
-                  <Tooltip
-                    key={participant.userId}
-                    label={user ? `${user.firstName} ${user.lastName}` : participant.fullName ?? participant.role}
-                  >
-                    <HStack bg="whiteAlpha.200" borderRadius="full" px={3} py={1} spacing={2}>
-                      <Text fontSize="sm">
-                        {user ? `${user.firstName} ${user.lastName}` : participant.fullName ?? participant.role}
-                      </Text>
-                      <AvailabilityBadge status={user?.presenceStatus} />
-                    </HStack>
-                  </Tooltip>
+                  <Badge key={participant.userId} bg="whiteAlpha.200" color="white" borderRadius="full" px={3} py={1}>
+                    {user ? `${user.firstName} ${user.lastName}` : participant.fullName ?? participant.role}
+                  </Badge>
                 );
               })}
-              <Button
-                size="sm"
-                variant={isFollowingThread ? 'solid' : 'outline'}
-                colorScheme="teal"
-                leftIcon={<StarIcon />}
-                onClick={onToggleFollowThread}
-              >
-                {isFollowingThread ? 'Following' : 'Follow thread'}
-              </Button>
             </HStack>
           )}
         </Flex>
@@ -170,24 +123,13 @@ const ChatWindow = ({
 
       <Flex flex={1} direction="column" minH={0}>
         <Box ref={scrollRef} flex={1} overflowY="auto" px={6} py={5} bg="linear-gradient(180deg, #fbfdff 0%, #f4f8fb 100%)">
-          <HStack mb={4}>
-            <Input
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search messages, people, or task mentions"
-              bg="white"
-            />
-            <IconButton aria-label="Search messages" icon={<SearchIcon />} />
-          </HStack>
           <Stack spacing={4}>
-            {filteredMessages.length === 0 ? (
+            {messages.length === 0 ? (
               <Box borderWidth="1px" borderColor="gray.100" borderRadius="2xl" p={6} bg="white">
-                <Text color="gray.500">
-                  {searchTerm ? 'No messages matched your search.' : 'No messages yet. Start the conversation or generate AI tasks.'}
-                </Text>
+                <Text color="gray.500">No messages yet. Start the conversation or generate AI tasks.</Text>
               </Box>
             ) : (
-              filteredMessages.map((message) => {
+              messages.map((message) => {
                 const sender = usersById[message.senderId] ?? message.sender;
                 const senderLabel =
                   message.senderType === 'AI'
@@ -298,21 +240,6 @@ const ChatWindow = ({
         <Divider />
 
         <Box px={6} py={5} bg="white">
-          <HStack mb={3} justify="space-between" wrap="wrap">
-            <Text fontSize="sm" color="slate.500">Saved replies</Text>
-            <Menu>
-              <MenuButton as={Button} size="sm" rightIcon={<ChevronDownIcon />} variant="outline">
-                Insert snippet
-              </MenuButton>
-              <MenuList>
-                {savedReplies.map((reply) => (
-                  <MenuItem key={reply} onClick={() => setDraft((prev) => (prev ? `${prev} ${reply}` : reply))}>
-                    {reply}
-                  </MenuItem>
-                ))}
-              </MenuList>
-            </Menu>
-          </HStack>
           <Stack direction={{ base: 'column', md: 'row' }} spacing={3}>
             <Input
               value={draft}

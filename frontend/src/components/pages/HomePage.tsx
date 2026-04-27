@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { authService } from '../../services/auth.service';
 import { userService } from '../../services/user.service';
 import {
@@ -10,6 +10,7 @@ import {
 } from '@chakra-ui/react';
 import ThemeSelector from '../selectors/ThemeSelector';
 import SideNavbar from '../layout/SideNavbar';
+import Board from '../tasks/Board';
 import { AdminDashboard } from '../admin/AdminDashboard';
 import { UserRole } from '../../types/user';
 import { EmployeeDashboard } from '../employee/EmployeeDashboard';
@@ -17,7 +18,6 @@ import { TaskReminderToasts } from '../notifications/TaskReminderToasts';
 
 const HomePage = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
 
@@ -52,7 +52,6 @@ const HomePage = () => {
   }
 
   const isAdmin = userRole === UserRole.ADMIN;
-  const employeeView = searchParams.get('view') ?? 'tasks';
 
   return (
     <Flex bg="var(--light-color)" w="100vw" minH="100vh">
@@ -62,7 +61,7 @@ const HomePage = () => {
           {isAdmin ? (
             <AdminDashboard isAdmin={true} />
           ) : (
-            <EmployeeDashboard activeView={employeeView} />
+            <EmployeeDashboard />
           )}
         </Box>
       </Flex>

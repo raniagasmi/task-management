@@ -31,8 +31,6 @@ import {
   collaborationService,
 } from '../../services/collaboration.service';
 import { collaborationSocket } from '../../services/collaboration.socket';
-import { workspacePreferencesService } from '../../services/workspace-preferences.service';
-import { ProductivitySettingsDrawer } from '../settings/ProductivitySettingsDrawer';
 
 const seenKey = (conversationId: string) => `collaboration:lastSeen:${conversationId}`;
 
@@ -75,8 +73,6 @@ const CollaborationPage = () => {
   const [typingLabel, setTypingLabel] = useState('');
   const [conversationPreferences, setConversationPreferences] = useState<ConversationPreferences>(emptyPreferences);
   const [showArchivedConversations, setShowArchivedConversations] = useState(false);
-  const [followedThreads, setFollowedThreads] = useState<string[]>(workspacePreferencesService.getPreferences().collaboration.followedThreads);
-  const [savedReplies, setSavedReplies] = useState<string[]>(workspacePreferencesService.getPreferences().collaboration.savedReplies);
   const selectedConversationIdRef = useRef('');
   const currentUserIdRef = useRef('');
   const usersByIdRef = useRef<Record<string, User>>({});
@@ -96,12 +92,6 @@ const CollaborationPage = () => {
   useEffect(() => {
     localStorage.setItem(preferenceKey(currentUser?.id), JSON.stringify(conversationPreferences));
   }, [conversationPreferences, currentUser?.id]);
-
-  useEffect(() => {
-    const preferences = workspacePreferencesService.getPreferences();
-    setFollowedThreads(preferences.collaboration.followedThreads);
-    setSavedReplies(preferences.collaboration.savedReplies);
-  }, [currentUser?.id]);
 
   useEffect(() => {
     selectedConversationIdRef.current = selectedConversationId;
@@ -133,18 +123,6 @@ const CollaborationPage = () => {
 
     const removeNewMessage = collaborationSocket.onNewMessage((message) => {
       if (message.conversationId !== selectedConversationIdRef.current) {
-        if (
-          followedThreads.includes(message.conversationId) &&
-          workspacePreferencesService.shouldDeliver('collaboration')
-        ) {
-          toast({
-            title: 'Followed thread update',
-            description: message.content,
-            status: 'info',
-            duration: 3000,
-            isClosable: true,
-          });
-        }
         setConversations((prev) =>
           prev.map((item) => {
             const conversationId = toConversationId(item);
@@ -259,12 +237,6 @@ const CollaborationPage = () => {
       }
     });
 
-    const removePresenceUpdated = collaborationSocket.onPresenceUpdated((payload) => {
-      setUsers((prev) =>
-        prev.map((user) => (user.id === payload.userId ? { ...user, presenceStatus: payload.status } : user)),
-      );
-    });
-
     return () => {
       removeNewMessage();
       removeAiGenerated();
@@ -272,10 +244,9 @@ const CollaborationPage = () => {
       removeConversationNew();
       removeTypingStart();
       removeTypingStop();
-      removePresenceUpdated();
       socket.disconnect();
     };
-  }, [followedThreads, toast]);
+  }, [toast]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -385,7 +356,6 @@ const CollaborationPage = () => {
         lastName: user.lastName ?? '',
         role: (user.role ?? UserRole.EMPLOYEE) as UserRole,
         isActive: user.isActive ?? true,
-        presenceStatus: user.presenceStatus,
         createdAt: user.createdAt ?? '',
         updatedAt: user.updatedAt ?? '',
       });
@@ -796,7 +766,6 @@ const CollaborationPage = () => {
                       New
                     </Button>
                   )}
-                  <ProductivitySettingsDrawer />
                 </Flex>
               </Flex>
 
@@ -835,8 +804,6 @@ const CollaborationPage = () => {
                 isSending={isSending}
                 isAiThinking={isAiThinking}
                 typingLabel={typingLabel}
-                savedReplies={savedReplies}
-                isFollowingThread={followedThreads.includes(selectedConversationId)}
                 onSendMessage={handleSendMessage}
                 onStartTyping={handleStartTyping}
                 onStopTyping={handleStopTyping}
@@ -844,20 +811,6 @@ const CollaborationPage = () => {
                 onApproveProposal={handleApproveProposal}
                 onRejectProposal={handleRejectProposal}
                 onManualAIGeneration={handleRegenerateAi}
-                onToggleFollowThread={() => {
-                  const next = followedThreads.includes(selectedConversationId)
-                    ? followedThreads.filter((id) => id !== selectedConversationId)
-                    : [...followedThreads, selectedConversationId];
-                  setFollowedThreads(next);
-                  const updated = workspacePreferencesService.updatePreferences((preferences) => ({
-                    ...preferences,
-                    collaboration: {
-                      ...preferences.collaboration,
-                      followedThreads: next,
-                    },
-                  }));
-                  setSavedReplies(updated.collaboration.savedReplies);
-                }}
               />
             )}
           </Box>

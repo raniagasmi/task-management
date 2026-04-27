@@ -5,7 +5,6 @@ export type DashboardEmployee = {
   id: string;
   name: string;
   email: string;
-  presenceStatus?: 'ONLINE' | 'PAUSE' | 'OFFLINE';
 };
 
 export type DashboardProject = {
@@ -20,3 +19,4 @@ export type EmployeeDashboardResponse = {
   tasks: Task[];
   lastUpdated: string;
 };
+

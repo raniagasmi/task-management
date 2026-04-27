@@ -52,7 +52,7 @@ export class DashboardService {
       };
     });
 
-    const employeesMap = new Map<string, { id: string; name: string; email: string; presenceStatus?: 'ONLINE' | 'PAUSE' | 'OFFLINE' }>();
+    const employeesMap = new Map<string, { id: string; name: string; email: string }>();
     (Array.isArray(conversations) ? conversations : []).forEach((conversation: any) => {
       const members = [
         ...(conversation?.members ?? []),
@@ -74,12 +74,7 @@ export class DashboardService {
         const candidateName = `${firstName} ${lastName}`.trim() || fullName;
         const name = candidateName && candidateName !== id ? candidateName : 'Unknown Employee';
 
-        employeesMap.set(id, {
-          id,
-          name,
-          email,
-          presenceStatus: (member?.presenceStatus as 'ONLINE' | 'PAUSE' | 'OFFLINE' | undefined) ?? 'OFFLINE',
-        });
+        employeesMap.set(id, { id, name, email });
       });
     });
 
@@ -141,3 +136,4 @@ export class DashboardService {
     return alerts;
   }
 }
+
