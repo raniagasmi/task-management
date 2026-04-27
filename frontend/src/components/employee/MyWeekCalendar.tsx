@@ -295,7 +295,7 @@ const MyWeekCalendar = ({ tasks, onTaskSelect }: MyWeekCalendarProps) => {
     <Stack spacing={5}>
       <Box>
         <Heading size="md" color="#0f172a">
-          My Week
+          My Dashboard
         </Heading>
         <Text color="gray.600" mt={1}>
           Drag tasks to another day to reschedule them. Time slots are auto-arranged from 9:00 AM to 5:00 PM.

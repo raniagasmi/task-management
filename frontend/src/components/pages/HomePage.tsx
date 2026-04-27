@@ -55,7 +55,7 @@ const HomePage = () => {
   const isAdmin = userRole === UserRole.ADMIN;
   const section = new URLSearchParams(location.search).get('section');
   const initialSection =
-    section === 'work-hub' || section === 'projects' || section === 'calendar' || section === 'alerts'
+    section === 'tasks' || section === 'projects' || section === 'calendar' || section === 'alerts'
       ? (section as any as EmployeeDashboardSection)
       : undefined;
 

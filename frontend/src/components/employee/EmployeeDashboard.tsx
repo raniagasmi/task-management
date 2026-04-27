@@ -37,18 +37,20 @@ import { collaborationService } from '../../services/collaboration.service';
 import TaskActionPanel, { TaskActionComment, TaskDecision } from '../tasks/TaskActionPanel';
 import { Task as TaskType } from '../../types/task';
 
-export type EmployeeDashboardSection = 'work-hub' | 'alerts';
+export type EmployeeDashboardSection = 'tasks' | 'projects' | 'calendar' | 'alerts';
 
 interface EmployeeDashboardProps {
   initialSection?: EmployeeDashboardSection;
 }
 
 const sectionToTabIndex: Record<EmployeeDashboardSection, number> = {
-  'work-hub': 0,
+  tasks: 0,
+  projects: 0,
+  calendar: 0,
   alerts: 1,
 };
 
-export const EmployeeDashboard = ({ initialSection = 'work-hub' }: EmployeeDashboardProps) => {
+export const EmployeeDashboard = ({ initialSection = 'tasks' }: EmployeeDashboardProps) => {
   const currentUserId = authService.getCurrentUser()?.id;
   const { currentStatus, togglePause } = useTimeTracking(currentUserId);
   const toast = useToast();
@@ -57,7 +59,7 @@ export const EmployeeDashboard = ({ initialSection = 'work-hub' }: EmployeeDashb
   const [data, setData] = useState<EmployeeDashboardResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
-  const [tabIndex, setTabIndex] = useState(sectionToTabIndex[initialSection]);
+  const [currentSection, setCurrentSection] = useState<EmployeeDashboardSection>(initialSection);
   const [selectedTask, setSelectedTask] = useState<TaskType | null>(null);
   const [taskComments, setTaskComments] = useState<TaskActionComment[]>([]);
   const [taskDecision, setTaskDecision] = useState<TaskDecision | null>(null);
@@ -111,7 +113,7 @@ export const EmployeeDashboard = ({ initialSection = 'work-hub' }: EmployeeDashb
   }, []);
 
   useEffect(() => {
-    setTabIndex(sectionToTabIndex[initialSection]);
+    setCurrentSection(initialSection);
   }, [initialSection]);
 
   const handleTaskSelect = (task: TaskType) => {
@@ -240,38 +242,76 @@ export const EmployeeDashboard = ({ initialSection = 'work-hub' }: EmployeeDashb
 
       {!isLoading && data && (
         <Box bg="white" borderRadius="2xl" boxShadow="0 8px 24px rgba(0, 0, 0, 0.08)" overflow="hidden">
-          <Tabs colorScheme="teal" isLazy index={tabIndex} onChange={setTabIndex}>
-            <TabList 
-              mb={0} 
-              borderBottomWidth="2px" 
-              borderColor="gray.100"
-              px={6}
-              pt={4}
-              bg="linear-gradient(135deg, rgba(16, 185, 129, 0.02), rgba(59, 130, 246, 0.02))"
-            >
-              <Tab fontWeight="600" fontSize="md" color="gray.700" _selected={{ color: 'teal.600', borderColor: 'teal.500' }}>
-                My Work Hub
-              </Tab>
-              <Tab fontWeight="600" fontSize="md" color="gray.700" _selected={{ color: 'teal.600', borderColor: 'teal.500' }}>
+          {/* Header controls: simplified to only Tasks and Alerts. Sidebar controls projects/calendar which render below */}
+          <Box px={6} py={4} bg="linear-gradient(135deg, rgba(16, 185, 129, 0.02), rgba(59, 130, 246, 0.02))" borderBottomWidth="2px" borderColor="gray.100">
+            <HStack spacing={4} align="center">
+              <Button variant={currentSection === 'tasks' ? 'solid' : 'ghost'} colorScheme="teal" onClick={() => setCurrentSection('tasks')}>
+                Tasks
+              </Button>
+
+              <Button variant={currentSection === 'alerts' ? 'solid' : 'ghost'} colorScheme="teal" onClick={() => setCurrentSection('alerts')}>
                 Alerts
                 {data.alerts.filter((a) => !a.isResolved).length > 0 && (
                   <Badge ml={2} colorScheme="red" borderRadius="full">
                     {data.alerts.filter((a) => !a.isResolved).length}
                   </Badge>
                 )}
-              </Tab>
-            </TabList>
+              </Button>
+            </HStack>
+          </Box>
 
-            <TabPanels>
-              <TabPanel py={6} px={6}>
+          <Box p={6}>
+            {currentSection === 'tasks' && (
+              <Box>
                 <Board showControls={false} showTaskActionPanel={false} onTaskSelect={handleTaskSelect} />
-              </TabPanel>
+              </Box>
+            )}
 
-              <TabPanel py={6} px={6}>
+            {currentSection === 'alerts' && (
+              <Box>
                 <AlertsPanel alerts={data.alerts} />
-              </TabPanel>
-            </TabPanels>
-          </Tabs>
+              </Box>
+            )}
+
+            {currentSection === 'calendar' && (
+              <Box bg="white" borderRadius="2xl" boxShadow="0 12px 30px rgba(15, 23, 42, 0.06)" p={6}>
+                {/* Calendar view: reuse MyWeekCalendar but present title as "My Dashboard" and enable drag/drop and capacity visuals */}
+                <Heading size="md" color="#0f172a" mb={2}>
+                  My Dashboard
+                </Heading>
+                <Text color="gray.600" mb={4}>Interactive week view — drag tasks into time slots to schedule them. Shows assigned vs available capacity.</Text>
+                <MyWeekCalendar tasks={data.tasks} onTaskSelect={handleTaskSelect} />
+              </Box>
+            )}
+
+            {currentSection === 'projects' && (
+              <Box bg="white" borderRadius="2xl" boxShadow="0 12px 30px rgba(15, 23, 42, 0.06)" p={6}>
+                <Heading size="md" mb={3} color="#0f172a">My Projects</Heading>
+                <Text color="gray.600" mb={4}>Assigned projects and key details</Text>
+
+                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                  {data.projects.map((proj) => {
+                    const projectTasks = data.tasks.filter((t) => t.conversationId === proj.id);
+                    const colleagueIds = Array.from(new Set(projectTasks.map((t) => t.assignedTo)));
+                    const colleagues = data.employees.filter((e) => colleagueIds.includes(e.id));
+
+                    return (
+                      <Box key={proj.id} borderWidth={1} borderColor="gray.100" borderRadius="lg" p={4}>
+                        <Heading size="sm" mb={2}>{proj.name}</Heading>
+                        <Text fontSize="sm" color="gray.600" mb={2}>{projectTasks.length} tasks assigned</Text>
+                        <Text fontSize="sm" color="gray.600" mb={3}>{colleagues.length} teammates</Text>
+                        <HStack spacing={2}>
+                          {colleagues.slice(0, 4).map((c) => (
+                            <Badge key={c.id} colorScheme="teal">{c.name}</Badge>
+                          ))}
+                        </HStack>
+                      </Box>
+                    );
+                  })}
+                </SimpleGrid>
+              </Box>
+            )}
+          </Box>
         </Box>
       )}
 

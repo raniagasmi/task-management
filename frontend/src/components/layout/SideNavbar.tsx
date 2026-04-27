@@ -8,14 +8,14 @@ interface SideNavbarProps {
   onLogoutClick?: () => void;
 }
 
-type EmployeeNavSection = 'work-hub' | 'projects' | 'week';
+type EmployeeNavSection = 'tasks' | 'projects' | 'calendar';
 
 const SideNavbar = ({ onLogoutClick }: SideNavbarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const currentUser = authService.getCurrentUser();
   const isAdmin = currentUser?.role?.toLowerCase() === UserRole.ADMIN;
-  const currentSection = (new URLSearchParams(location.search).get('section') ?? 'work-hub') as EmployeeNavSection;
+  const currentSection = (new URLSearchParams(location.search).get('section') ?? 'tasks') as EmployeeNavSection;
 
   const navLinkSx = {
     display: 'inline-flex',
@@ -43,7 +43,7 @@ const SideNavbar = ({ onLogoutClick }: SideNavbarProps) => {
   const employeeNavItems = [
     {
       label: 'Tasks',
-      isActive: location.pathname === '/app' && currentSection === 'work-hub',
+      isActive: location.pathname === '/app' && currentSection === 'tasks',
       onClick: () => navigate('/app'),
     },
     {
