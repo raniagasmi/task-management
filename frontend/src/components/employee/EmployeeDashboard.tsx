@@ -33,6 +33,7 @@ import { AlertsPanel } from '../admin/AlertsPanel';
 import { Board } from '../tasks/Board';
 import { authService } from '../../services/auth.service';
 import { useTimeTracking } from '../../hooks/useAdminMetrics';
+import MyWeekCalendar from './MyWeekCalendar';
 import { collaborationService } from '../../services/collaboration.service';
 import TaskActionPanel, { TaskActionComment, TaskDecision } from '../tasks/TaskActionPanel';
 import { Task as TaskType } from '../../types/task';
@@ -313,6 +314,7 @@ export const EmployeeDashboard = ({ initialSection = 'tasks' }: EmployeeDashboar
             )}
           </Box>
         </Box>
+
       )}
 
       <TaskActionPanel

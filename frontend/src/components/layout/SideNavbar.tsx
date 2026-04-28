@@ -44,17 +44,18 @@ const SideNavbar = ({ onLogoutClick }: SideNavbarProps) => {
     {
       label: 'Tasks',
       isActive: location.pathname === '/app' && currentSection === 'tasks',
+
       onClick: () => navigate('/app'),
     },
     {
-      label: 'Projects',
+      label: 'My Projects',
       isActive: location.pathname === '/app' && currentSection === 'projects',
       onClick: () => navigate('/app?section=projects'),
     },
     {
-      label: 'Calendar',
-      isActive: location.pathname === '/app' && currentSection === 'calendar',
-      onClick: () => navigate('/app?section=calendar'),
+      label: 'My Week',
+      isActive: location.pathname === '/app' && currentSection === 'week',
+      onClick: () => navigate('/app?section=week'),
     },
     {
       label: 'Collaboration',

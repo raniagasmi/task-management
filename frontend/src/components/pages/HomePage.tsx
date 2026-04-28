@@ -57,6 +57,7 @@ const HomePage = () => {
   const initialSection =
     section === 'tasks' || section === 'projects' || section === 'calendar' || section === 'alerts'
       ? (section as any as EmployeeDashboardSection)
+
       : undefined;
 
   return (
