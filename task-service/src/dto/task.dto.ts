@@ -34,6 +34,10 @@ export class CreateTaskDto {
 
   @IsString()
   @IsOptional()
+  projectId?: string;
+
+  @IsString()
+  @IsOptional()
   proposalId?: string;
 }
 
@@ -73,6 +77,10 @@ export class UpdateTaskDto {
   @IsString()
   @IsOptional()
   conversationId?: string;
+
+  @IsString()
+  @IsOptional()
+  projectId?: string;
 
   @IsString()
   @IsOptional()

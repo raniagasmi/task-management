@@ -47,6 +47,9 @@ export class Task {
   conversationId?: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
+  projectId?: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
   proposalId?: string;
 
   

@@ -16,6 +16,8 @@ import {
   Spinner,
   Stack,
   Text,
+  Tooltip,
+  VStack,
 } from '@chakra-ui/react';
 import { ArrowForwardIcon, RepeatIcon } from '@chakra-ui/icons';
 import { CollaborationConversation, CollaborationMessage, CollaborationTaskProposal } from '../../services/collaboration.service';
@@ -191,24 +193,48 @@ const ChatWindow = ({
           </Stack>
         </Flex>
 
-        {conversation && (
-          <HStack spacing={2} mt={4} wrap="wrap">
-            {conversation.participants?.slice(0, 3).map((participant) => {
-              const user = usersById[participant.userId] ?? participant.user;
-              const presenceStatus = user?.presenceStatus ?? 'OFFLINE';
-
-              return (
-                <Badge key={participant.userId} bg="whiteAlpha.200" color="white" borderRadius="full" px={3} py={1}>
-                  <HStack spacing={2}>
-                    <Box w="2" h="2" borderRadius="full" bg={presenceColor(presenceStatus)} />
-                    <Text as="span">
-                      {user ? `${user.firstName} ${user.lastName}` : participant.fullName ?? participant.role}
-                    </Text>
-                  </HStack>
-                </Badge>
-              );
-            })}
-          </HStack>
+        {conversation && conversation.participants && conversation.participants.length > 0 && (
+          <Box mt={4}>
+            <Tooltip
+              label={
+                <VStack align="start" spacing={1} py={2}>
+                  <Text fontSize="sm" fontWeight="bold">Participants ({conversation.participants.length})</Text>
+                  {conversation.participants.map((participant) => {
+                    const user = usersById[participant.userId] ?? participant.user;
+                    const presenceStatus = user?.presenceStatus ?? 'OFFLINE';
+                    const presenceText = presenceStatus === 'ONLINE' ? '🟢' : presenceStatus === 'PAUSE' ? '🟡' : '⚪';
+                    return (
+                      <HStack key={participant.userId} spacing={2} fontSize="sm">
+                        <Box fontSize="xs">{presenceText}</Box>
+                        <Text>{user ? `${user.firstName} ${user.lastName}` : participant.fullName ?? participant.role}</Text>
+                      </HStack>
+                    );
+                  })}
+                </VStack>
+              }
+              placement="bottom"
+              hasArrow
+              bg="gray.800"
+              color="white"
+            >
+              <Flex
+                align="center"
+                justify="center"
+                w={10}
+                h={10}
+                borderRadius="full"
+                bg="whiteAlpha.200"
+                color="white"
+                cursor="pointer"
+                fontSize="lg"
+                fontWeight="bold"
+                _hover={{ bg: 'whiteAlpha.300', transform: 'scale(1.1)' }}
+                transition="all 0.2s"
+              >
+                {conversation.participants.length}
+              </Flex>
+            </Tooltip>
+          </Box>
         )}
       </Box>
 

@@ -9,6 +9,8 @@ interface CreateTaskDto {
   status: TaskStatus;
   priority?: TaskPriority;
   assignedTo?: string;
+  conversationId?: string;
+  projectId?: string;
   order: number;
   dueDate?: Date;
  
@@ -19,6 +21,8 @@ interface UpdateTaskDto {
   description?: string;
   priority?: TaskPriority;
   assignedTo?: string;
+  conversationId?: string;
+  projectId?: string;
   status?: TaskStatus;
   order?: number;
   dueDate?: Date;

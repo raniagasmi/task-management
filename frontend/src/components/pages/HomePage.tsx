@@ -10,11 +10,14 @@ import {
 } from '@chakra-ui/react';
 import ThemeSelector from '../selectors/ThemeSelector';
 import SideNavbar from '../layout/SideNavbar';
-import Board from '../tasks/Board';
 import { AdminDashboard } from '../admin/AdminDashboard';
 import { UserRole } from '../../types/user';
 import { EmployeeDashboard, type EmployeeDashboardSection } from '../employee/EmployeeDashboard';
 import { TaskReminderToasts } from '../notifications/TaskReminderToasts';
+
+const isEmployeeDashboardSection = (value: string | null): value is EmployeeDashboardSection => {
+  return value === 'tasks' || value === 'projects' || value === 'calendar' || value === 'alerts';
+};
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -54,11 +57,7 @@ const HomePage = () => {
 
   const isAdmin = userRole === UserRole.ADMIN;
   const section = new URLSearchParams(location.search).get('section');
-  const initialSection =
-    section === 'tasks' || section === 'projects' || section === 'calendar' || section === 'alerts'
-      ? (section as any as EmployeeDashboardSection)
-
-      : undefined;
+  const initialSection = isEmployeeDashboardSection(section) ? section : undefined;
 
   return (
     <Flex bg="var(--light-color)" w="100vw" minH="100vh">

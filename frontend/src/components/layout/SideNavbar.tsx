@@ -48,14 +48,14 @@ const SideNavbar = ({ onLogoutClick }: SideNavbarProps) => {
       onClick: () => navigate('/app'),
     },
     {
-      label: 'My Projects',
+      label: 'Projects',
       isActive: location.pathname === '/app' && currentSection === 'projects',
       onClick: () => navigate('/app?section=projects'),
     },
     {
-      label: 'My Week',
-      isActive: location.pathname === '/app' && currentSection === 'week',
-      onClick: () => navigate('/app?section=week'),
+      label: 'Calendar',
+      isActive: location.pathname === '/app' && currentSection === 'calendar',
+      onClick: () => navigate('/app?section=calendar'),
     },
     {
       label: 'Collaboration',
@@ -104,6 +104,7 @@ const SideNavbar = ({ onLogoutClick }: SideNavbarProps) => {
               <Button
                 key={item.label}
                 onClick={item.onClick}
+                className={item.label === 'Projects' || item.label === 'Calendar' ? 'css-3s7v68' : undefined}
                 variant="ghost"
                 justifyContent="flex-start"
                 px={3}

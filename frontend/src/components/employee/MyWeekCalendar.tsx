@@ -142,6 +142,59 @@ interface MyWeekCalendarProps {
   onTaskSelect?: (task: TaskType) => void;
 }
 
+interface OverflowPoolProps {
+  tasks: TaskType[];
+  onTaskSelect?: (task: TaskType) => void;
+}
+
+const OverflowPool = ({ tasks, onTaskSelect }: OverflowPoolProps) => {
+  const { setNodeRef, isOver } = useDroppable({ id: 'overflow-pool' });
+
+  return (
+    <Box
+      ref={setNodeRef}
+      bg={isOver ? 'rgba(15, 23, 42, 0.05)' : 'white'}
+      borderRadius="2xl"
+      boxShadow="0 12px 30px rgba(15, 23, 42, 0.06)"
+      p={5}
+      borderWidth="1px"
+      borderColor={isOver ? 'gray.400' : 'gray.100'}
+      transition="all 0.2s ease"
+    >
+      <Flex justify="space-between" align="center" mb={4}>
+        <Box>
+          <Heading size="sm" color="#0f172a">
+            Outside this week
+          </Heading>
+          <Text color="gray.500" fontSize="sm">
+            Drag items into weekday columns to schedule them.
+          </Text>
+        </Box>
+        <Badge colorScheme="gray" borderRadius="full" px={3} py={1}>
+          {tasks.length}
+        </Badge>
+      </Flex>
+
+      <SortableContext items={tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
+        <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4}>
+          {tasks.map((task) => {
+            const displayDate = toValidDate(task.dueDate ?? task.createdAt) ?? new Date();
+
+            return (
+              <Box key={task.id}>
+                <Text fontSize="xs" color="gray.500" mb={1}>
+                  {format(displayDate, 'EEE, MMM d')}
+                </Text>
+                <Task task={task} onEdit={onTaskSelect ?? (() => undefined)} onDelete={() => undefined} />
+              </Box>
+            );
+          })}
+        </SimpleGrid>
+      </SortableContext>
+    </Box>
+  );
+};
+
 const MyWeekCalendar = ({ tasks, onTaskSelect }: MyWeekCalendarProps) => {
   const toast = useToast();
   const [calendarTasks, setCalendarTasks] = useState<TaskType[]>(tasks);
@@ -295,7 +348,7 @@ const MyWeekCalendar = ({ tasks, onTaskSelect }: MyWeekCalendarProps) => {
     <Stack spacing={5}>
       <Box>
         <Heading size="md" color="#0f172a">
-          My Dashboard
+          My Week Calendar
         </Heading>
         <Text color="gray.600" mt={1}>
           Drag tasks to another day to reschedule them. Time slots are auto-arranged from 9:00 AM to 5:00 PM.
@@ -305,43 +358,12 @@ const MyWeekCalendar = ({ tasks, onTaskSelect }: MyWeekCalendarProps) => {
       <DndContext collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
         <Flex gap={4} align="stretch" overflowX="auto" pb={2}>
           {schedules.map((schedule) => (
-            <ScheduleColumn key={schedule.key} schedule={schedule} />
+            <ScheduleColumn key={schedule.key} schedule={schedule} onTaskClick={onTaskSelect} />
           ))}
         </Flex>
+
+        {overflowTasks.length > 0 && <OverflowPool tasks={overflowTasks} onTaskSelect={onTaskSelect} />}
       </DndContext>
-
-      {overflowTasks.length > 0 && (
-        <Box bg="white" borderRadius="2xl" boxShadow="0 12px 30px rgba(15, 23, 42, 0.06)" p={5}>
-          <Flex justify="space-between" align="center" mb={4}>
-            <Box>
-              <Heading size="sm" color="#0f172a">
-                Outside this week
-              </Heading>
-              <Text color="gray.500" fontSize="sm">
-                Tasks outside the current 7-day window stay visible here.
-              </Text>
-            </Box>
-            <Badge colorScheme="gray" borderRadius="full" px={3} py={1}>
-              {overflowTasks.length}
-            </Badge>
-          </Flex>
-
-          <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4}>
-            {overflowTasks.map((task) => {
-              const displayDate = toValidDate(task.dueDate ?? task.createdAt) ?? new Date();
-
-              return (
-                <Box key={task.id}>
-                  <Text fontSize="xs" color="gray.500" mb={1}>
-                    {format(displayDate, 'EEE, MMM d')}
-                  </Text>
-                  <Task task={task} onEdit={onTaskSelect ?? (() => undefined)} onDelete={() => undefined} />
-                </Box>
-              );
-            })}
-          </SimpleGrid>
-        </Box>
-      )}
     </Stack>
   );
 };

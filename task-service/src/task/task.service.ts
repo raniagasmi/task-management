@@ -24,17 +24,34 @@ export class TaskService {
     return uuidv4({ random: Buffer.from(mongoId.padEnd(32, '0').slice(0, 32), 'hex') });
   }
 
+  private deriveProjectId(projectId?: string, conversationId?: string): string | undefined {
+    return projectId ?? conversationId;
+  }
+
+  private withDerivedProjectId(task: Task): Task {
+    if (task.projectId || !task.conversationId) {
+      return task;
+    }
+
+    return {
+      ...task,
+      projectId: task.conversationId,
+    } as Task;
+  }
+
   async create(createTaskDto: CreateTaskDto, userId: string): Promise<Task> {
     console.log('Creating task with userId:', userId); 
     const task = this.taskRepository.create({
       ...createTaskDto,
+      projectId: this.deriveProjectId(createTaskDto.projectId, createTaskDto.conversationId),
       assignedTo: createTaskDto.assignedTo ?? '',
       createdBy: userId,
       status: createTaskDto.status || TaskStatus.TODO,
       order: createTaskDto.order || 0,
     });
     console.log('Task to be created:', task); 
-    return await this.taskRepository.save(task);
+    const saved = await this.taskRepository.save(task);
+    return this.withDerivedProjectId(saved);
   }
 
   async createBatch(input: CreateTaskBatchDto): Promise<Task[]> {
@@ -49,12 +66,13 @@ export class TaskService {
   }
 
   async findAll(): Promise<Task[]> {
-    return await this.taskRepository.find({
+    const tasks = await this.taskRepository.find({
       order: {
         order: 'ASC',
         createdAt: 'DESC',
       },
     });
+    return tasks.map((task) => this.withDerivedProjectId(task));
   }
 
   async findOne(id: string): Promise<Task> {
@@ -62,13 +80,18 @@ export class TaskService {
     if (!task) {
       throw new NotFoundException(`Task with ID ${id} not found`);
     }
-    return task;
+    return this.withDerivedProjectId(task);
   }
 
   async update(id: string, updateTaskDto: UpdateTaskDto): Promise<Task> {
     const task = await this.findOne(id);
-    Object.assign(task, updateTaskDto);
-    return await this.taskRepository.save(task);
+    const normalizedUpdate = {
+      ...updateTaskDto,
+      projectId: this.deriveProjectId(updateTaskDto.projectId, updateTaskDto.conversationId),
+    };
+    Object.assign(task, normalizedUpdate);
+    const saved = await this.taskRepository.save(task);
+    return this.withDerivedProjectId(saved);
   }
 
   async remove(
@@ -103,13 +126,14 @@ export class TaskService {
   }
 
   async getTasksByAssignee(userId: string): Promise<Task[]> {
-    return await this.taskRepository.find({
+    const tasks = await this.taskRepository.find({
       where: { assignedTo: userId },
       order: {
         order: 'ASC',
         createdAt: 'DESC',
       },
     });
+    return tasks.map((task) => this.withDerivedProjectId(task));
   }
 
   async updateTaskStatus(id: string, status: string): Promise<Task> {

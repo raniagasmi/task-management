@@ -40,6 +40,14 @@ export class CreateTaskDto {
   @IsOptional()
   assignedTo?: string;
 
+  @IsString()
+  @IsOptional()
+  conversationId?: string;
+
+  @IsString()
+  @IsOptional()
+  projectId?: string;
+
   @IsNumber()
   @IsOptional()
   order?: number;
@@ -65,6 +73,14 @@ export class UpdateTaskDto {
   @IsString()
   @IsOptional()
   assignedTo?: string;
+
+  @IsString()
+  @IsOptional()
+  conversationId?: string;
+
+  @IsString()
+  @IsOptional()
+  projectId?: string;
 
   @IsNumber()
   @IsOptional()

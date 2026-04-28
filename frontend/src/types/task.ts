@@ -23,6 +23,7 @@ export interface Task {
   };
   createdBy: string;
   order: number;
+  projectId?: string;
   conversationId?: string;
   createdAt?: Date;
   updatedAt?: Date;
