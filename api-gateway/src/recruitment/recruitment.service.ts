@@ -3,6 +3,7 @@ import {
   Injectable,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import type { File as MulterFile } from 'multer';
 
 @Injectable()
 export class RecruitmentService {
@@ -22,6 +23,46 @@ export class RecruitmentService {
 
   async generateLinkedInPost(body: { jobOfferId: string }) {
     return this.forwardPost('/recruitment/linkedin-post', body);
+  }
+
+  async listPublicJobs() {
+    return this.forwardGet('/jobs');
+  }
+
+  async listAdminJobs() {
+    return this.forwardGet('/recruitment/admin/jobs');
+  }
+
+  async applyForJob(jobOfferId: string, body: { name: string; email: string }, cv?: MulterFile) {
+    if (!cv) {
+      throw new HttpException('cv file is required.', 400);
+    }
+    const form = new FormData();
+    form.append('name', body.name);
+    form.append('email', body.email);
+    form.append('cv', new Blob([cv.buffer], { type: cv.mimetype }), cv.originalname);
+    return this.forwardMultipart(`/jobs/${jobOfferId}/apply`, form);
+  }
+
+  async trackApplication(token: string) {
+    return this.forwardGet(`/recruitment/applications/track/${encodeURIComponent(token)}`);
+  }
+
+  async listApplicationsByJob(jobOfferId: string, status?: string) {
+    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+    return this.forwardGet(`/recruitment/admin/jobs/${jobOfferId}/applications${query}`);
+  }
+
+  async getApplicationPipeline(jobOfferId: string) {
+    return this.forwardGet(`/recruitment/admin/jobs/${jobOfferId}/pipeline`);
+  }
+
+  async getApplication(applicationId: string) {
+    return this.forwardGet(`/recruitment/admin/applications/${applicationId}`);
+  }
+
+  async updateApplicationStatus(applicationId: string, status: string) {
+    return this.forward('PATCH', `/recruitment/admin/applications/${applicationId}/status`, { status });
   }
 
   async getCopilotHistory(userId: string) {
@@ -63,14 +104,18 @@ export class RecruitmentService {
     return this.forward('POST', path, body);
   }
 
-  private async forward(method: 'GET' | 'POST' | 'PATCH', path: string, body?: unknown) {
+  private async forwardMultipart(path: string, body: FormData) {
+    return this.forward('POST', path, body, true);
+  }
+
+  private async forward(method: 'GET' | 'POST' | 'PATCH', path: string, body?: unknown, isMultipart = false) {
     try {
       const response = await fetch(`${this.baseUrl}${path}`, {
         method,
-        headers: {
+        headers: isMultipart ? undefined : {
           'Content-Type': 'application/json',
         },
-        body: body === undefined ? undefined : JSON.stringify(body),
+        body: body === undefined ? undefined : isMultipart ? body as BodyInit : JSON.stringify(body),
       });
 
       const text = await response.text();

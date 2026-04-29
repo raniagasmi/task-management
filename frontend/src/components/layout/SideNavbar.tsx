@@ -92,8 +92,8 @@ const SideNavbar = ({ onLogoutClick }: SideNavbarProps) => {
               <Text as={NavLink} to="/collaboration" sx={navLinkSx}>
                 Collaboration
               </Text>
-              <Text as={NavLink} to="/recruitment" sx={navLinkSx}>
-                Recruitment
+              <Text as={NavLink} to="/admin/recruitment" sx={navLinkSx}>
+                Recruitment AI Copilot
               </Text>
               <Text as={NavLink} to="/admin" sx={navLinkSx}>
                 Admin

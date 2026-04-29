@@ -12,6 +12,8 @@ import WelcomeOnboarding from './components/auth/WelcomeOnboarding';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import PublicRoute from './components/auth/PublicRoute';
 import RecruitmentPage from './components/recruitment/RecruitmentPage';
+import AdminRecruitmentPage from './components/recruitment/AdminRecruitmentPage';
+import CandidateApplicationPage from './components/recruitment/CandidateApplicationPage';
 import AdminPage from './components/pages/AdminPage';
 import CollaborationPage from './components/collaboration/CollaborationPage';
 import { ThemeProvider } from './context/ThemeContext';
@@ -81,6 +83,15 @@ function App() {
                 </ProtectedRoute>
               )}
             />
+            <Route
+              path="/admin/recruitment"
+              element={(
+                <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
+                  <AdminRecruitmentPage />
+                </ProtectedRoute>
+              )}
+            />
+            <Route path="/application/:token" element={<CandidateApplicationPage />} />
             <Route
               path="/collaboration"
               element={(

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   Badge,
   Box,
@@ -10,16 +11,30 @@ import {
   HStack,
   Icon,
   Image,
+  Input,
   Link,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
   SimpleGrid,
+  FormControl,
+  FormLabel,
   Stack,
   Text,
+  Textarea,
+  useDisclosure,
+  useToast,
   VStack,
 } from '@chakra-ui/react';
 import { ArrowForwardIcon, CalendarIcon, CheckCircleIcon, SmallAddIcon } from '@chakra-ui/icons';
 import { Link as RouterLink } from 'react-router-dom';
 import { BriefcaseBusiness, ClipboardCheck, MessageSquareText, Users } from 'lucide-react';
 import { authService } from '../../services/auth.service';
+import { RecruitmentJobSummary, recruitmentService } from '../../services/recruitment.service';
 import logoImage from '../../assets/images/logo.png';
 
 const metrics = [
@@ -111,6 +126,80 @@ const tourSteps = [
 const MarketingLandingPage = () => {
   const isAuthenticated = authService.isAuthenticated();
   const primaryHref = isAuthenticated ? '/app' : '/register';
+  const toast = useToast();
+  const applyModal = useDisclosure();
+  const [jobs, setJobs] = useState<RecruitmentJobSummary[]>([]);
+  const [selectedJob, setSelectedJob] = useState<RecruitmentJobSummary | null>(null);
+  const [candidateName, setCandidateName] = useState('');
+  const [candidateEmail, setCandidateEmail] = useState('');
+  const [candidateCv, setCandidateCv] = useState<File | null>(null);
+  const [submittingApplication, setSubmittingApplication] = useState(false);
+  const [applicationLink, setApplicationLink] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const payload = await recruitmentService.listPublicJobs();
+        if (!cancelled) {
+          setJobs(payload);
+        }
+      } catch (error) {
+        console.warn('Failed to load public job offers:', error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const openApply = (job: RecruitmentJobSummary) => {
+    setSelectedJob(job);
+    setCandidateName('');
+    setCandidateEmail('');
+    setCandidateCv(null);
+    setApplicationLink('');
+    applyModal.onOpen();
+  };
+
+  const submitApplication = async () => {
+    if (!selectedJob || !candidateName.trim() || !candidateEmail.trim() || !candidateCv) {
+      toast({
+        title: 'Complete your application',
+        status: 'warning',
+        duration: 2200,
+        isClosable: true,
+      });
+      return;
+    }
+
+    setSubmittingApplication(true);
+    try {
+      const response = await recruitmentService.applyToJob(selectedJob.jobOfferId, {
+        name: candidateName,
+        email: candidateEmail,
+        cv: candidateCv,
+      });
+      setApplicationLink(response.applicationLink);
+      toast({
+        title: 'Application submitted',
+        description: 'A confirmation email has been sent with your tracking link.',
+        status: 'success',
+        duration: 3200,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: 'Application failed',
+        description: error instanceof Error ? error.message : 'Unexpected error',
+        status: 'error',
+        duration: 3200,
+        isClosable: true,
+      });
+    } finally {
+      setSubmittingApplication(false);
+    }
+  };
 
   return (
     <Box bg="#f6f4ee" minH="100vh" color="#14213d">
@@ -129,6 +218,7 @@ const MarketingLandingPage = () => {
             </HStack>
 
             <HStack spacing={6} display={{ base: 'none', md: 'flex' }}>
+              <Link href="#careers" fontWeight="600" color="#52607a">Careers</Link>
               <Link href="#proof" fontWeight="600" color="#52607a">Proof</Link>
               <Link href="#tour" fontWeight="600" color="#52607a">Product Tour</Link>
               <Link href="#pricing" fontWeight="600" color="#52607a">Plans</Link>
@@ -318,6 +408,58 @@ const MarketingLandingPage = () => {
           </Box>
         </Grid>
       </Container>
+
+      <Box id="careers" bg="#fffaf2" py={{ base: 12, md: 16 }}>
+        <Container maxW="1280px">
+          <Stack spacing={8}>
+            <HStack justify="space-between" align="flex-end" wrap="wrap" gap={4}>
+              <Stack spacing={3}>
+                <Badge alignSelf="flex-start" px={4} py={1.5} borderRadius="full" bg="#dff5ef" color="#216e6d">
+                  Open roles
+                </Badge>
+                <Heading fontSize={{ base: '2xl', md: '4xl' }} letterSpacing="-0.05em">
+                  Apply without creating an account.
+                </Heading>
+                <Text color="#52607a" maxW="58ch">
+                  Browse current job offers and submit your CV with only your name and email.
+                </Text>
+              </Stack>
+              <Button variant="outline" borderColor="#319795" color="#216e6d" onClick={() => window.location.reload()}>
+                Refresh jobs
+              </Button>
+            </HStack>
+
+            {jobs.length === 0 ? (
+              <Box bg="white" borderRadius="28px" p={6} boxShadow="0 18px 40px rgba(20,33,61,0.08)">
+                <Text color="#52607a">No open roles are published yet.</Text>
+              </Box>
+            ) : (
+              <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} gap={6}>
+                {jobs.map((job) => (
+                  <Box key={job.jobOfferId} bg="white" borderRadius="28px" p={6} boxShadow="0 18px 40px rgba(20,33,61,0.08)">
+                    <HStack justify="space-between" mb={3}>
+                      <Badge colorScheme="teal" borderRadius="full">{job.department}</Badge>
+                      <Badge colorScheme={job.status === 'Open' ? 'green' : 'gray'} borderRadius="full">{job.status}</Badge>
+                    </HStack>
+                    <Heading size="md" mb={3}>{job.title}</Heading>
+                    <Text color="#52607a" noOfLines={4} minH="96px">
+                      {job.description ?? 'No description available.'}
+                    </Text>
+                    <HStack mt={5} justify="space-between" align="center">
+                      <Text fontSize="sm" color="#52607a">
+                        {job.postedAt ? new Date(job.postedAt).toLocaleDateString() : ''}
+                      </Text>
+                      <Button size="sm" bg="#319795" color="white" _hover={{ bg: '#216e6d' }} onClick={() => openApply(job)}>
+                        Apply
+                      </Button>
+                    </HStack>
+                  </Box>
+                ))}
+              </SimpleGrid>
+            )}
+          </Stack>
+        </Container>
+      </Box>
 
       <Box id="proof" bg="#184e4d" color="white" py={{ base: 12, md: 16 }}>
         <Container maxW="1280px">
@@ -585,6 +727,58 @@ const MarketingLandingPage = () => {
           </HStack>
         </HStack>
       </Box>
+
+      <Modal isOpen={applyModal.isOpen} onClose={applyModal.onClose} isCentered size="lg">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Apply for {selectedJob?.title ?? 'this role'}</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            {applicationLink ? (
+              <Stack spacing={4}>
+                <Text color="#52607a">
+                  Your application was submitted. A confirmation email was sent with your tracking link.
+                </Text>
+                <Button as={RouterLink} to={new URL(applicationLink).pathname} colorScheme="teal">
+                  Track application
+                </Button>
+              </Stack>
+            ) : (
+              <Stack spacing={4}>
+                <FormControl isRequired>
+                  <FormLabel>Name</FormLabel>
+                  <Input value={candidateName} onChange={(event) => setCandidateName(event.target.value)} />
+                </FormControl>
+                <FormControl isRequired>
+                  <FormLabel>Email</FormLabel>
+                  <Input type="email" value={candidateEmail} onChange={(event) => setCandidateEmail(event.target.value)} />
+                </FormControl>
+                <FormControl>
+                  <FormLabel>Role</FormLabel>
+                  <Textarea value={selectedJob?.description ?? ''} isReadOnly resize="none" minH="120px" />
+                </FormControl>
+                <FormControl isRequired>
+                  <FormLabel>CV</FormLabel>
+                  <Input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.txt"
+                    pt={1}
+                    onChange={(event) => setCandidateCv(event.target.files?.[0] ?? null)}
+                  />
+                </FormControl>
+              </Stack>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={applyModal.onClose}>Close</Button>
+            {!applicationLink && (
+              <Button colorScheme="teal" isLoading={submittingApplication} onClick={() => void submitApplication()}>
+                Submit application
+              </Button>
+            )}
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 };

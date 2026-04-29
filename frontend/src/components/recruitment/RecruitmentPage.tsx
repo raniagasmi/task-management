@@ -261,6 +261,7 @@ const RecruitmentPage = () => {
     try {
       const offer = await recruitmentService.generateJobOffer(normalizedPrompt);
       setJobOffer(offer);
+      recruitmentService.addJobToCache(offer);
       const resolvedId = resolveJobOfferId(offer);
       setJobOfferId(resolvedId);
       setLinkedinPost('');

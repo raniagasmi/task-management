@@ -4,8 +4,10 @@ import { ChatMessageDto } from './dto/chat-message.dto';
 import { CopilotAppendMessageDto } from './dto/copilot-message.dto';
 import { CopilotResetDto } from './dto/copilot-reset.dto';
 import { CopilotCreateThreadDto, CopilotThreadActionDto } from './dto/copilot-thread.dto';
+import { ListApplicationsQueryDto } from './dto/list-applications.query.dto';
 import { GenerateJobOfferDto } from './dto/generate-job-offer.dto';
 import { GenerateLinkedInPostDto } from './dto/generate-linkedin-post.dto';
+import { UpdateApplicationStatusDto } from './dto/update-application-status.dto';
 import { RecruitmentService } from './recruitment.service';
 
 @Controller('recruitment')
@@ -15,6 +17,11 @@ export class RecruitmentController {
 	@Get('health')
 	health() {
 		return { ok: true, service: 'recruitment' };
+	}
+
+	@Get('applications/track/:token')
+	async trackApplication(@Param('token') token: string) {
+		return this.recruitmentService.getApplicationByToken(token);
 	}
 
 	@Post('generate')
@@ -114,5 +121,50 @@ export class RecruitmentController {
 	)
 	async copilotReset(@Body() body: CopilotResetDto) {
 		return this.recruitmentService.resetCopilotHistory(body.userId, body.threadId);
+	}
+
+	@Get('admin/jobs/:jobOfferId/applications')
+	@UsePipes(
+		new ValidationPipe({
+			whitelist: true,
+			forbidNonWhitelisted: true,
+			transform: true,
+		}),
+	)
+	async adminApplications(
+		@Param('jobOfferId') jobOfferId: string,
+		@Query() query: ListApplicationsQueryDto,
+	) {
+		return this.recruitmentService.listApplicationsByJobOfferId(jobOfferId, query.status);
+	}
+
+	@Get('admin/jobs')
+	async adminJobs() {
+		return this.recruitmentService.listPublicJobOffers();
+	}
+
+	@Get('admin/jobs/:jobOfferId/pipeline')
+	async adminPipeline(@Param('jobOfferId') jobOfferId: string) {
+		return this.recruitmentService.getApplicationPipelineByJobOfferId(jobOfferId);
+	}
+
+	@Get('admin/applications/:applicationId')
+	async adminApplication(@Param('applicationId') applicationId: string) {
+		return this.recruitmentService.getApplicationById(applicationId);
+	}
+
+	@Patch('admin/applications/:applicationId/status')
+	@UsePipes(
+		new ValidationPipe({
+			whitelist: true,
+			forbidNonWhitelisted: true,
+			transform: true,
+		}),
+	)
+	async adminApplicationStatus(
+		@Param('applicationId') applicationId: string,
+		@Body() body: UpdateApplicationStatusDto,
+	) {
+		return this.recruitmentService.updateApplicationStatus(applicationId, body.status);
 	}
 }

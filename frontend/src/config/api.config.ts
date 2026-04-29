@@ -31,6 +31,9 @@ export const API_ENDPOINTS = {
   },
   RECRUITMENT: {
     BASE: '/api/recruitment',
+    PUBLIC_JOBS: '/api/recruitment/jobs',
+    PUBLIC_APPLY: (jobOfferId: string) => `/api/recruitment/jobs/${jobOfferId}/apply`,
+    TRACK_APPLICATION: (token: string) => `/api/recruitment/applications/track/${token}`,
     GENERATE: '/api/recruitment/generate',
     CHAT: '/api/recruitment/chat',
     LINKEDIN: '/api/recruitment/linkedin-post',
@@ -42,6 +45,11 @@ export const API_ENDPOINTS = {
     COPILOT_THREAD_ARCHIVE: (threadId: string) => `/api/recruitment/copilot/threads/${threadId}/archive`,
     COPILOT_THREAD_MUTE: (threadId: string) => `/api/recruitment/copilot/threads/${threadId}/mute`,
     COPILOT_THREAD_DELETE: (threadId: string) => `/api/recruitment/copilot/threads/${threadId}/delete`,
+    ADMIN_JOBS: '/api/recruitment/admin/jobs',
+    ADMIN_JOB_APPLICATIONS: (jobOfferId: string) => `/api/recruitment/admin/jobs/${jobOfferId}/applications`,
+    ADMIN_JOB_PIPELINE: (jobOfferId: string) => `/api/recruitment/admin/jobs/${jobOfferId}/pipeline`,
+    ADMIN_APPLICATION: (applicationId: string) => `/api/recruitment/admin/applications/${applicationId}`,
+    ADMIN_APPLICATION_STATUS: (applicationId: string) => `/api/recruitment/admin/applications/${applicationId}/status`,
   },
   DASHBOARD: {
     ME: '/dashboard/me',
