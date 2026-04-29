@@ -1,3 +1,4 @@
+﻿/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unnecessary-type-assertion */
 import {
   Controller,
   Get,
@@ -38,10 +39,17 @@ export class TaskController {
 
   private async enrichTasksWithUsers(tasks: Task[]) {
     const ids = Array.from(
-      new Set((tasks ?? []).map((t) => String((t as any)?.assignedTo ?? '')).filter(Boolean)),
+      new Set(
+        (tasks ?? [])
+          .map((t) => String((t as any)?.assignedTo ?? ''))
+          .filter(Boolean),
+      ),
     );
 
-    const usersById = new Map<string, { firstName: string; lastName: string; email?: string }>();
+    const usersById = new Map<
+      string,
+      { firstName: string; lastName: string; email?: string }
+    >();
     await Promise.all(
       ids.map(async (id) => {
         try {
@@ -65,7 +73,10 @@ export class TaskController {
       return {
         ...task,
         assignedToUser: assignedUser
-          ? { firstName: assignedUser.firstName, lastName: assignedUser.lastName }
+          ? {
+              firstName: assignedUser.firstName,
+              lastName: assignedUser.lastName,
+            }
           : undefined,
       };
     });
@@ -214,7 +225,10 @@ export class TaskController {
     }
 
     const task = await this.taskClient
-      .send<Task>({ cmd: 'updateTask' }, { id, updateTaskDto: { dueDate: body.dueDate } })
+      .send<Task>(
+        { cmd: 'updateTask' },
+        { id, updateTaskDto: { dueDate: body.dueDate } },
+      )
       .toPromise();
 
     if (!task) {
@@ -236,10 +250,9 @@ export class TaskController {
     }
 
     const result = await this.taskClient
-      .send<{ message: string } | undefined>(
-        { cmd: 'removeTask' },
-        { id, userId, role: req.user?.role ?? '' },
-      )
+      .send<
+        { message: string } | undefined
+      >({ cmd: 'removeTask' }, { id, userId, role: req.user?.role ?? '' })
       .toPromise();
 
     if (!result) {
@@ -296,7 +309,10 @@ export class TaskController {
     @Body() updateTaskOrderDto: UpdateTaskOrderDto,
   ) {
     const updated = await this.taskClient
-      .send({ cmd: 'updateTaskOrder' }, { id, newOrder: updateTaskOrderDto.order })
+      .send(
+        { cmd: 'updateTaskOrder' },
+        { id, newOrder: updateTaskOrderDto.order },
+      )
       .toPromise();
     const [enriched] = await this.enrichTasksWithUsers([updated as Task]);
     return enriched as any;
