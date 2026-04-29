@@ -33,6 +33,14 @@ export class RecruitmentService {
     return this.forwardGet('/recruitment/admin/jobs');
   }
 
+  async approveJob(jobOfferId: string) {
+    return this.forward('PATCH', `/recruitment/admin/jobs/${jobOfferId}/approve`);
+  }
+
+  async rejectJob(jobOfferId: string) {
+    return this.forward('PATCH', `/recruitment/admin/jobs/${jobOfferId}/reject`);
+  }
+
   async closeJob(jobOfferId: string) {
     return this.forward('DELETE', `/recruitment/admin/jobs/${jobOfferId}`);
   }

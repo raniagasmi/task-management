@@ -21,6 +21,9 @@ export class JobOffer {
   @Prop({ required: true, trim: true })
   seniorityLevel!: string;
 
+  @Prop({ type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' })
+  approvalStatus!: 'pending' | 'approved' | 'rejected';
+
   @Prop({ type: Date, default: Date.now })
   createdAt!: Date;
 }

@@ -140,7 +140,17 @@ export class RecruitmentController {
 
 	@Get('admin/jobs')
 	async adminJobs() {
-		return this.recruitmentService.listPublicJobOffers();
+		return this.recruitmentService.listAllJobOffersForAdmin();
+	}
+
+	@Patch('admin/jobs/:jobOfferId/approve')
+	async adminApproveJob(@Param('jobOfferId') jobOfferId: string) {
+		return this.recruitmentService.approveJobOffer(jobOfferId);
+	}
+
+	@Patch('admin/jobs/:jobOfferId/reject')
+	async adminRejectJob(@Param('jobOfferId') jobOfferId: string) {
+		return this.recruitmentService.rejectJobOffer(jobOfferId);
 	}
 
 	@Delete('admin/jobs/:jobOfferId')

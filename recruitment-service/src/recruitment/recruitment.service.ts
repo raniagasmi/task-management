@@ -213,7 +213,7 @@ export class RecruitmentService implements OnModuleInit {
 
 	async listPublicJobOffers() {
 		const jobs = await this.jobOfferModel
-			.find()
+			.find({ approvalStatus: 'approved' })
 			.sort({ createdAt: -1 })
 			.lean();
 
@@ -230,6 +230,74 @@ export class RecruitmentService implements OnModuleInit {
 			niceToHave: jobOffer.niceToHave ?? [],
 			seniorityLevel: jobOffer.seniorityLevel,
 		}));
+	}
+
+	async listAllJobOffersForAdmin() {
+		const jobs = await this.jobOfferModel
+			.find()
+			.sort({ createdAt: -1 })
+			.lean();
+
+		return jobs.map((jobOffer) => ({
+			jobOfferId: jobOffer._id.toString(),
+			title: jobOffer.title,
+			department: this.inferDepartment(jobOffer.title, jobOffer.description),
+			date: jobOffer.createdAt ? new Date(jobOffer.createdAt).toISOString() : null,
+			postedAt: jobOffer.createdAt ? new Date(jobOffer.createdAt).toISOString() : null,
+			status: 'Open',
+			approvalStatus: jobOffer.approvalStatus ?? 'pending',
+			description: jobOffer.description,
+			responsibilities: jobOffer.responsibilities ?? [],
+			requiredSkills: jobOffer.requiredSkills ?? [],
+			niceToHave: jobOffer.niceToHave ?? [],
+			seniorityLevel: jobOffer.seniorityLevel,
+		}));
+	}
+
+	async approveJobOffer(jobOfferId: string) {
+		const normalizedJobOfferId = jobOfferId.trim();
+		if (!isValidObjectId(normalizedJobOfferId)) {
+			throw new BadRequestException('Invalid jobOfferId format.');
+		}
+
+		const updated = await this.jobOfferModel.findByIdAndUpdate(
+			normalizedJobOfferId,
+			{ approvalStatus: 'approved' },
+			{ new: true }
+		).lean();
+
+		if (!updated) {
+			throw new NotFoundException('JobOffer not found.');
+		}
+
+		return {
+			ok: true,
+			jobOfferId: normalizedJobOfferId,
+			approvalStatus: updated.approvalStatus,
+		};
+	}
+
+	async rejectJobOffer(jobOfferId: string) {
+		const normalizedJobOfferId = jobOfferId.trim();
+		if (!isValidObjectId(normalizedJobOfferId)) {
+			throw new BadRequestException('Invalid jobOfferId format.');
+		}
+
+		const updated = await this.jobOfferModel.findByIdAndUpdate(
+			normalizedJobOfferId,
+			{ approvalStatus: 'rejected' },
+			{ new: true }
+		).lean();
+
+		if (!updated) {
+			throw new NotFoundException('JobOffer not found.');
+		}
+
+		return {
+			ok: true,
+			jobOfferId: normalizedJobOfferId,
+			approvalStatus: updated.approvalStatus,
+		};
 	}
 
 	async closeJobOffer(jobOfferId: string) {

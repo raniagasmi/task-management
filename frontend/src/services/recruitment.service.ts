@@ -95,6 +95,7 @@ export interface RecruitmentJobSummary {
   requiredSkills?: string[];
   niceToHave?: string[];
   seniorityLevel?: string;
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
 }
 
 export interface ApplicationDetails {
@@ -493,6 +494,28 @@ class RecruitmentService {
       return response.data;
     } catch (error) {
       throw this.buildAxiosErrorMessage('Failed to load application pipeline', error);
+    }
+  }
+
+  async approveJobOffer(jobOfferId: string): Promise<{ ok: boolean; jobOfferId: string; approvalStatus: string }> {
+    try {
+      const response = await api.patch<{ ok: boolean; jobOfferId: string; approvalStatus: string }>(
+        API_ENDPOINTS.RECRUITMENT.ADMIN_JOB_APPROVE(jobOfferId),
+      );
+      return response.data;
+    } catch (error) {
+      throw this.buildAxiosErrorMessage('Failed to approve job offer', error);
+    }
+  }
+
+  async rejectJobOffer(jobOfferId: string): Promise<{ ok: boolean; jobOfferId: string; approvalStatus: string }> {
+    try {
+      const response = await api.patch<{ ok: boolean; jobOfferId: string; approvalStatus: string }>(
+        API_ENDPOINTS.RECRUITMENT.ADMIN_JOB_REJECT(jobOfferId),
+      );
+      return response.data;
+    } catch (error) {
+      throw this.buildAxiosErrorMessage('Failed to reject job offer', error);
     }
   }
 }

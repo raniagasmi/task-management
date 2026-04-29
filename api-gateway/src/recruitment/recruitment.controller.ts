@@ -183,6 +183,18 @@ export class RecruitmentController {
     return this.recruitmentService.listAdminJobs();
   }
 
+  @Patch('admin/jobs/:jobOfferId/approve')
+  @UseGuards(JwtAuthGuard)
+  async approveJob(@Param('jobOfferId') jobOfferId: string) {
+    return this.recruitmentService.approveJob(jobOfferId);
+  }
+
+  @Patch('admin/jobs/:jobOfferId/reject')
+  @UseGuards(JwtAuthGuard)
+  async rejectJob(@Param('jobOfferId') jobOfferId: string) {
+    return this.recruitmentService.rejectJob(jobOfferId);
+  }
+
   @Delete('admin/jobs/:jobOfferId')
   @UseGuards(JwtAuthGuard)
   async closeJob(@Param('jobOfferId') jobOfferId: string) {

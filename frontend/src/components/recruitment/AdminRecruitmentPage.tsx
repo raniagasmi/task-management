@@ -209,6 +209,54 @@ const AdminRecruitmentPage = () => {
     }
   };
 
+  const handleApproveJob = async (jobOfferId: string) => {
+    try {
+      await recruitmentService.approveJobOffer(jobOfferId);
+      await loadJobs();
+      toast({
+        title: 'Job offer approved',
+        description: 'Candidates can now see this job offer',
+        status: 'success',
+        duration: 1800,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: 'Unable to approve job offer',
+        description: error instanceof Error ? error.message : 'Unexpected error',
+        status: 'error',
+        duration: 2600,
+        isClosable: true,
+      });
+    }
+  };
+
+  const handleRejectJob = async (jobOfferId: string) => {
+    const confirmed = window.confirm('Reject this job offer?');
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await recruitmentService.rejectJobOffer(jobOfferId);
+      await loadJobs();
+      toast({
+        title: 'Job offer rejected',
+        status: 'success',
+        duration: 1800,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: 'Unable to reject job offer',
+        description: error instanceof Error ? error.message : 'Unexpected error',
+        status: 'error',
+        duration: 2600,
+        isClosable: true,
+      });
+    }
+  };
+
   const handleCreateSlot = () => {
     if (!selectedJobId || !slotDate || !slotTime || Number(slotCapacity) < 1) {
       toast({
@@ -296,12 +344,13 @@ const AdminRecruitmentPage = () => {
                         <Th>Department</Th>
                         <Th>Date</Th>
                         <Th>Status</Th>
-                        <Th>Applications</Th>
+                        <Th>Approval</Th>
+                        <Th>Actions</Th>
                       </Tr>
                     </Thead>
                     <Tbody>
                       {jobs.length === 0 ? (
-                        <Tr><Td colSpan={5}><Text color="gray.500">No job offers available.</Text></Td></Tr>
+                        <Tr><Td colSpan={6}><Text color="gray.500">No job offers available.</Text></Td></Tr>
                       ) : jobs.map((job) => (
                         <Tr key={job.jobOfferId}>
                           <Td fontWeight={600}>{job.title}</Td>
@@ -309,12 +358,31 @@ const AdminRecruitmentPage = () => {
                           <Td>{new Date(job.postedAt).toLocaleDateString()}</Td>
                           <Td><Badge colorScheme={job.status === 'Open' ? 'green' : 'gray'}>{job.status}</Badge></Td>
                           <Td>
-                            <HStack>
+                            <Badge colorScheme={
+                              job.approvalStatus === 'approved' ? 'green' :
+                              job.approvalStatus === 'rejected' ? 'red' :
+                              'orange'
+                            }>
+                              {job.approvalStatus ? job.approvalStatus.charAt(0).toUpperCase() + job.approvalStatus.slice(1) : 'Pending'}
+                            </Badge>
+                          </Td>
+                          <Td>
+                            <HStack spacing={2}>
+                              {job.approvalStatus === 'pending' && (
+                                <>
+                                  <Button size="sm" colorScheme="green" variant="outline" onClick={() => void handleApproveJob(job.jobOfferId)}>
+                                    Approve
+                                  </Button>
+                                  <Button size="sm" colorScheme="red" variant="outline" onClick={() => void handleRejectJob(job.jobOfferId)}>
+                                    Reject
+                                  </Button>
+                                </>
+                              )}
                               <Button size="sm" onClick={() => void handleViewApplications(job.jobOfferId)}>
-                                View Applications
+                                View
                               </Button>
                               <Button size="sm" colorScheme="red" variant="outline" onClick={() => void handleCloseApplications(job.jobOfferId)}>
-                                Close applications
+                                Delete
                               </Button>
                             </HStack>
                           </Td>
@@ -328,7 +396,7 @@ const AdminRecruitmentPage = () => {
 
             <TabPanel px={0}>
               <Stack spacing={5}>
-                <Box borderRadius="2xl" bg="white" boxShadow="0 18px 45px rgba(15, 23, 42, 0.08)" overflow="hidden">
+                <Box display="none" borderRadius="2xl" bg="white" boxShadow="0 18px 45px rgba(15, 23, 42, 0.08)" overflow="hidden">
                   <HStack justify="space-between" px={6} py={5} borderBottom="1px solid" borderColor="gray.100">
                     <Heading size="md" color="#0f172a">Job offers</Heading>
                     <Button size="sm" variant="outline" onClick={() => void loadJobs()}>
@@ -372,7 +440,7 @@ const AdminRecruitmentPage = () => {
                   </Box>
                 </Box>
 
-                <Box borderRadius="2xl" bg="white" boxShadow="0 18px 45px rgba(15, 23, 42, 0.08)" p={5}>
+                <Box display="none" borderRadius="2xl" bg="white" boxShadow="0 18px 45px rgba(15, 23, 42, 0.08)" p={5}>
                   <Grid templateColumns={{ base: '1fr', md: '1fr 1fr 1fr' }} gap={4}>
                     <FormControl>
                       <FormLabel fontSize="sm">Job offer</FormLabel>
