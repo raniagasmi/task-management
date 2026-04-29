@@ -68,7 +68,6 @@ const SideNavbar = ({ onLogoutClick }: SideNavbarProps) => {
     <Button
       key={item.label}
       onClick={item.onClick}
-      className={item.label === 'Projects' || item.label === 'Calendar' ? 'css-3s7v68' : undefined}
       variant="ghost"
       justifyContent="flex-start"
       px={3}

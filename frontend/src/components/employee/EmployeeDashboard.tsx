@@ -354,8 +354,8 @@ export const EmployeeDashboard = ({ initialSection = 'tasks' }: EmployeeDashboar
 
             {currentSection === 'calendar' && (
               <Box bg="white" borderRadius="2xl" boxShadow="0 12px 30px rgba(15, 23, 42, 0.06)" p={6}>
-                <Heading size="md" color="#0f172a" mb={2}>
-                  My Week
+                <Heading size="md" color="#0f172a" mb={2} fontWeight="700">
+                  My Week Calendar
                 </Heading>
                 <Text color="gray.600" mb={4}>
                   Calendar-based weekly planning. Drag tasks between days to rebalance workload and keep capacity under control.

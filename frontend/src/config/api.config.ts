@@ -21,6 +21,7 @@ export const API_ENDPOINTS = {
   TASKS: {
     BASE: '/tasks',
     BY_ID: (id: string) => `/tasks/${id}`,
+    SCHEDULE: (id: string) => `/tasks/${id}/schedule`,
     DETAILS: (id: string) => `/tasks/${id}/details`,
     STATUS: (id: string) => `/tasks/${id}/status`,
     ORDER: (id: string) => `/tasks/${id}/order`,

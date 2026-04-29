@@ -51,6 +51,10 @@ export class CreateTaskDto {
   @IsNumber()
   @IsOptional()
   order?: number;
+
+  @IsISO8601()
+  @IsOptional()
+  dueDate?: string;
 }
 
 export class UpdateTaskDto {
@@ -85,6 +89,10 @@ export class UpdateTaskDto {
   @IsNumber()
   @IsOptional()
   order?: number;
+
+  @IsISO8601()
+  @IsOptional()
+  dueDate?: string;
 }
 
 export class UpdateStatusDto {

@@ -188,6 +188,43 @@ export class TaskController {
     return enriched as any;
   }
 
+  @Put(':id/schedule')
+  @UsePipes(new ValidationPipe())
+  async updateSchedule(
+    @Param('id') id: string,
+    @Body() body: { dueDate?: string },
+    @Request() req: { user: { userId?: string; role?: string } },
+  ) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
+    const role = (req.user?.role ?? '').toLowerCase();
+    if (role !== 'admin') {
+      const task = await this.taskClient
+        .send<Task>({ cmd: 'findOneTask' }, id)
+        .toPromise();
+
+      const assignedTo = String((task as any)?.assignedTo ?? '');
+      const createdBy = String((task as any)?.createdBy ?? '');
+      if (assignedTo !== userId && createdBy !== userId) {
+        throw new ForbiddenException('Access denied');
+      }
+    }
+
+    const task = await this.taskClient
+      .send<Task>({ cmd: 'updateTask' }, { id, updateTaskDto: { dueDate: body.dueDate } })
+      .toPromise();
+
+    if (!task) {
+      throw new Error(`Task with id ${id} could not be updated`);
+    }
+
+    const [enriched] = await this.enrichTasksWithUsers([task]);
+    return enriched as any;
+  }
+
   @Delete(':id')
   async remove(
     @Param('id') id: string,

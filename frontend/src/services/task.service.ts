@@ -84,6 +84,21 @@ class TaskService {
     }
   }
 
+  async updateTaskSchedule(id: string, dueDate: Date): Promise<Task> {
+    try {
+      const response = await api.put<Task>(API_ENDPOINTS.TASKS.SCHEDULE(id), {
+        dueDate: dueDate.toISOString(),
+      });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(`Failed to update task schedule: ${error.message}`);
+      } else {
+        throw error;
+      }
+    }
+  }
+
   async deleteTask(id: string): Promise<void> {
     try {
       await api.delete(API_ENDPOINTS.TASKS.BY_ID(id));

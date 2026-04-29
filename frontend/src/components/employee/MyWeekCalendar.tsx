@@ -306,7 +306,7 @@ const MyWeekCalendar = ({ tasks, onTaskSelect }: MyWeekCalendarProps) => {
     );
 
     try {
-      await taskService.updateTask(taskId, { dueDate: nextDate });
+      await taskService.updateTaskSchedule(taskId, nextDate);
       toast({
         title: 'Task rescheduled',
         description: `${sourceTask.title} moved to ${format(nextDate, 'EEE, MMM d h:mm a')}`,
@@ -346,15 +346,6 @@ const MyWeekCalendar = ({ tasks, onTaskSelect }: MyWeekCalendarProps) => {
 
   return (
     <Stack spacing={5}>
-      <Box>
-        <Heading size="md" color="#0f172a">
-          My Week Calendar
-        </Heading>
-        <Text color="gray.600" mt={1}>
-          Drag tasks to another day to reschedule them. Time slots are auto-arranged from 9:00 AM to 5:00 PM.
-        </Text>
-      </Box>
-
       <DndContext collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
         <Flex gap={4} align="stretch" overflowX="auto" pb={2}>
           {schedules.map((schedule) => (
