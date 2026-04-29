@@ -33,6 +33,10 @@ export class RecruitmentService {
     return this.forwardGet('/recruitment/admin/jobs');
   }
 
+  async closeJob(jobOfferId: string) {
+    return this.forward('DELETE', `/recruitment/admin/jobs/${jobOfferId}`);
+  }
+
   async applyForJob(jobOfferId: string, body: { name: string; email: string }, cv?: MulterFile) {
     if (!cv) {
       throw new HttpException('cv file is required.', 400);
@@ -108,7 +112,7 @@ export class RecruitmentService {
     return this.forward('POST', path, body, true);
   }
 
-  private async forward(method: 'GET' | 'POST' | 'PATCH', path: string, body?: unknown, isMultipart = false) {
+  private async forward(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', path: string, body?: unknown, isMultipart = false) {
     try {
       const response = await fetch(`${this.baseUrl}${path}`, {
         method,

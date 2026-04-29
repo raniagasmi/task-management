@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ChatResponse, GeneratedJobOffer } from './recruitment.service';
 import { ChatMessageDto } from './dto/chat-message.dto';
 import { CopilotAppendMessageDto } from './dto/copilot-message.dto';
@@ -141,6 +141,11 @@ export class RecruitmentController {
 	@Get('admin/jobs')
 	async adminJobs() {
 		return this.recruitmentService.listPublicJobOffers();
+	}
+
+	@Delete('admin/jobs/:jobOfferId')
+	async adminCloseJob(@Param('jobOfferId') jobOfferId: string) {
+		return this.recruitmentService.closeJobOffer(jobOfferId);
 	}
 
 	@Get('admin/jobs/:jobOfferId/pipeline')

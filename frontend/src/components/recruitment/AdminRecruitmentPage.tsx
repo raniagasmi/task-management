@@ -36,6 +36,7 @@ import {
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
 import SideNavbar from '../layout/SideNavbar';
+import RecruitmentPage from './RecruitmentPage';
 import { authService } from '../../services/auth.service';
 import {
   ApplicationDetails,
@@ -100,8 +101,10 @@ const AdminRecruitmentPage = () => {
   const loadJobs = async () => {
     const nextJobs = await recruitmentService.listRecruitmentJobs();
     setJobs(nextJobs);
-    if (!selectedJobId && nextJobs.length > 0) {
+    if ((!selectedJobId || !nextJobs.some((job) => job.jobOfferId === selectedJobId)) && nextJobs.length > 0) {
       setSelectedJobId(nextJobs[0].jobOfferId);
+    } else if (nextJobs.length === 0) {
+      setSelectedJobId('');
     }
   };
 
@@ -167,6 +170,45 @@ const AdminRecruitmentPage = () => {
     detailsModal.onOpen();
   };
 
+  const handleViewApplications = async (jobOfferId: string) => {
+    setSelectedJobId(jobOfferId);
+    setStatusFilter('All');
+    await loadApplications(jobOfferId);
+  };
+
+  const handleCloseApplications = async (jobOfferId: string) => {
+    const confirmed = window.confirm('Close applications and delete this job offer?');
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await recruitmentService.closeJobOffer(jobOfferId);
+      const nextSlots = readJson<InterviewSlot[]>(SCHEDULING_KEY, []).filter((slot) => slot.jobOfferId !== jobOfferId);
+      localStorage.setItem(SCHEDULING_KEY, JSON.stringify(nextSlots));
+      setSlots(nextSlots);
+      if (selectedJobId === jobOfferId) {
+        setApplications([]);
+        setPipelineCounts({ Applied: 0, Interview: 0, Accepted: 0, Rejected: 0 });
+      }
+      await loadJobs();
+      toast({
+        title: 'Applications closed',
+        status: 'success',
+        duration: 1800,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: 'Unable to close applications',
+        description: error instanceof Error ? error.message : 'Unexpected error',
+        status: 'error',
+        duration: 2600,
+        isClosable: true,
+      });
+    }
+  };
+
   const handleCreateSlot = () => {
     if (!selectedJobId || !slotDate || !slotTime || Number(slotCapacity) < 1) {
       toast({
@@ -213,7 +255,7 @@ const AdminRecruitmentPage = () => {
       <Box flex={1} px={{ base: 4, md: 6, xl: 10 }} py={{ base: 8, md: 12 }} maxW="1600px" mx="auto">
         <Stack spacing={3} mb={8}>
           <Badge alignSelf="flex-start" colorScheme="teal" borderRadius="full" px={3} py={1}>
-            Recruitment AI Copilot
+            Recruitment
           </Badge>
           <Heading size="xl" color="#0f172a" letterSpacing="-0.03em">
             Recruitment module
@@ -223,24 +265,18 @@ const AdminRecruitmentPage = () => {
           </Text>
         </Stack>
 
-        <Tabs colorScheme="teal" variant="soft-rounded" isLazy defaultIndex={2}>
+        <Tabs colorScheme="teal" variant="soft-rounded" isLazy defaultIndex={0}>
           <TabList mb={6} gap={2} flexWrap="wrap">
             <Tab>AI Copilot</Tab>
             <Tab>Job Offers</Tab>
             <Tab>Applications</Tab>
-            <Tab>ATS</Tab>
             <Tab>Scheduling</Tab>
           </TabList>
 
           <TabPanels>
             <TabPanel px={0}>
-              <Box borderRadius="2xl" bg="white" boxShadow="0 18px 45px rgba(15, 23, 42, 0.08)" p={6}>
-                <Text color="gray.600" mb={4}>
-                  Use the existing Copilot experience.
-                </Text>
-                <Button colorScheme="teal" onClick={() => navigate('/recruitment')}>
-                  Open AI Copilot
-                </Button>
+              <Box borderRadius="2xl" bg="whiteAlpha.700" boxShadow="0 18px 45px rgba(15, 23, 42, 0.08)" p={{ base: 4, md: 6 }}>
+                <RecruitmentPage embedded />
               </Box>
             </TabPanel>
 
@@ -273,9 +309,14 @@ const AdminRecruitmentPage = () => {
                           <Td>{new Date(job.postedAt).toLocaleDateString()}</Td>
                           <Td><Badge colorScheme={job.status === 'Open' ? 'green' : 'gray'}>{job.status}</Badge></Td>
                           <Td>
-                            <Button size="sm" onClick={() => setSelectedJobId(job.jobOfferId)}>
-                              View applications
-                            </Button>
+                            <HStack>
+                              <Button size="sm" onClick={() => void handleViewApplications(job.jobOfferId)}>
+                                View Applications
+                              </Button>
+                              <Button size="sm" colorScheme="red" variant="outline" onClick={() => void handleCloseApplications(job.jobOfferId)}>
+                                Close applications
+                              </Button>
+                            </HStack>
                           </Td>
                         </Tr>
                       ))}
@@ -287,6 +328,50 @@ const AdminRecruitmentPage = () => {
 
             <TabPanel px={0}>
               <Stack spacing={5}>
+                <Box borderRadius="2xl" bg="white" boxShadow="0 18px 45px rgba(15, 23, 42, 0.08)" overflow="hidden">
+                  <HStack justify="space-between" px={6} py={5} borderBottom="1px solid" borderColor="gray.100">
+                    <Heading size="md" color="#0f172a">Job offers</Heading>
+                    <Button size="sm" variant="outline" onClick={() => void loadJobs()}>
+                      Refresh
+                    </Button>
+                  </HStack>
+                  <Box overflowX="auto">
+                    <Table variant="simple">
+                      <Thead bg="gray.50">
+                        <Tr>
+                          <Th>Title</Th>
+                          <Th>Department</Th>
+                          <Th>Date</Th>
+                          <Th>Status</Th>
+                          <Th>Actions</Th>
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        {jobs.length === 0 ? (
+                          <Tr><Td colSpan={5}><Text color="gray.500">No job offers available.</Text></Td></Tr>
+                        ) : jobs.map((job) => (
+                          <Tr key={job.jobOfferId}>
+                            <Td fontWeight={600}>{job.title}</Td>
+                            <Td>{job.department}</Td>
+                            <Td>{job.postedAt ? new Date(job.postedAt).toLocaleDateString() : '-'}</Td>
+                            <Td><Badge colorScheme={job.status === 'Open' ? 'green' : 'gray'}>{job.status}</Badge></Td>
+                            <Td>
+                              <HStack>
+                                <Button size="sm" onClick={() => void handleViewApplications(job.jobOfferId)}>
+                                  View Applications
+                                </Button>
+                                <Button size="sm" colorScheme="red" variant="outline" onClick={() => void handleCloseApplications(job.jobOfferId)}>
+                                  Close applications
+                                </Button>
+                              </HStack>
+                            </Td>
+                          </Tr>
+                        ))}
+                      </Tbody>
+                    </Table>
+                  </Box>
+                </Box>
+
                 <Box borderRadius="2xl" bg="white" boxShadow="0 18px 45px rgba(15, 23, 42, 0.08)" p={5}>
                   <Grid templateColumns={{ base: '1fr', md: '1fr 1fr 1fr' }} gap={4}>
                     <FormControl>
@@ -335,7 +420,7 @@ const AdminRecruitmentPage = () => {
                       </Thead>
                       <Tbody>
                         {applications.length === 0 ? (
-                          <Tr><Td colSpan={5}><Text color="gray.500">No applications found for this filter.</Text></Td></Tr>
+                          <Tr><Td colSpan={5}><Text color="gray.500">No applications yet.</Text></Td></Tr>
                         ) : applications.map((application) => (
                           <Tr key={application.applicationId}>
                             <Td fontWeight={600}>{application.candidate?.name ?? 'Unknown'}</Td>
@@ -373,15 +458,6 @@ const AdminRecruitmentPage = () => {
                   </Box>
                 </Box>
               </Stack>
-            </TabPanel>
-
-            <TabPanel px={0}>
-              <Box borderRadius="2xl" bg="white" boxShadow="0 18px 45px rgba(15, 23, 42, 0.08)" p={6}>
-                <Heading size="md" mb={2} color="#0f172a">ATS insights</Heading>
-                <Text color="gray.600">
-                  ATS details are available in each application detail view.
-                </Text>
-              </Box>
             </TabPanel>
 
             <TabPanel px={0}>

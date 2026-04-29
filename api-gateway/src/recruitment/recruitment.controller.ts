@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, UnauthorizedException, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UnauthorizedException, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import type { File as MulterFile } from 'multer';
@@ -181,6 +181,12 @@ export class RecruitmentController {
   @UseGuards(JwtAuthGuard)
   async adminJobs() {
     return this.recruitmentService.listAdminJobs();
+  }
+
+  @Delete('admin/jobs/:jobOfferId')
+  @UseGuards(JwtAuthGuard)
+  async closeJob(@Param('jobOfferId') jobOfferId: string) {
+    return this.recruitmentService.closeJob(jobOfferId);
   }
 
   @Get('admin/jobs/:jobOfferId/applications')

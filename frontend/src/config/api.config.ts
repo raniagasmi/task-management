@@ -46,6 +46,7 @@ export const API_ENDPOINTS = {
     COPILOT_THREAD_MUTE: (threadId: string) => `/api/recruitment/copilot/threads/${threadId}/mute`,
     COPILOT_THREAD_DELETE: (threadId: string) => `/api/recruitment/copilot/threads/${threadId}/delete`,
     ADMIN_JOBS: '/api/recruitment/admin/jobs',
+    ADMIN_JOB: (jobOfferId: string) => `/api/recruitment/admin/jobs/${jobOfferId}`,
     ADMIN_JOB_APPLICATIONS: (jobOfferId: string) => `/api/recruitment/admin/jobs/${jobOfferId}/applications`,
     ADMIN_JOB_PIPELINE: (jobOfferId: string) => `/api/recruitment/admin/jobs/${jobOfferId}/pipeline`,
     ADMIN_APPLICATION: (applicationId: string) => `/api/recruitment/admin/applications/${applicationId}`,

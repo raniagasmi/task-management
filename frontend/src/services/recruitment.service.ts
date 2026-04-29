@@ -396,6 +396,19 @@ class RecruitmentService {
     }
   }
 
+  async closeJobOffer(jobOfferId: string): Promise<{ ok: true; jobOfferId: string }> {
+    try {
+      const response = await api.delete<{ ok: true; jobOfferId: string }>(
+        API_ENDPOINTS.RECRUITMENT.ADMIN_JOB(jobOfferId),
+      );
+      const remainingJobs = this.readJobsCache().filter((job) => job.jobOfferId !== jobOfferId);
+      this.writeJobsCache(remainingJobs);
+      return response.data;
+    } catch (error) {
+      throw this.buildAxiosErrorMessage('Failed to close applications', error);
+    }
+  }
+
   async listPublicJobs(): Promise<RecruitmentJobSummary[]> {
     try {
       const response = await api.get<RecruitmentJobSummary[]>(API_ENDPOINTS.RECRUITMENT.PUBLIC_JOBS);

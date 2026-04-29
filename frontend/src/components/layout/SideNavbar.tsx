@@ -1,4 +1,4 @@
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Badge, Box, Button, Flex, Image, Stack, Text } from '@chakra-ui/react';
 import { authService } from '../../services/auth.service';
 import { UserRole } from '../../types/user';
@@ -16,29 +16,6 @@ const SideNavbar = ({ onLogoutClick }: SideNavbarProps) => {
   const currentUser = authService.getCurrentUser();
   const isAdmin = currentUser?.role?.toLowerCase() === UserRole.ADMIN;
   const currentSection = (new URLSearchParams(location.search).get('section') ?? 'tasks') as EmployeeNavSection;
-
-  const navLinkSx = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    width: '100%',
-    px: 3,
-    py: 2,
-    borderRadius: 'md',
-    fontSize: '0.95rem',
-    fontWeight: 600,
-    letterSpacing: '0.02em',
-    color: 'var(--font-color)',
-    textDecoration: 'none',
-    transition: 'all 0.2s ease',
-    _hover: {
-      color: '#7ee8d6',
-      bg: 'rgba(126, 232, 214, 0.12)',
-    },
-    '&[aria-current="page"]': {
-      color: '#7ee8d6',
-      bg: 'rgba(126, 232, 214, 0.16)',
-    },
-  };
 
   const employeeNavItems = [
     {
@@ -64,6 +41,55 @@ const SideNavbar = ({ onLogoutClick }: SideNavbarProps) => {
     },
   ];
 
+  const adminNavItems = [
+    {
+      label: 'Tasks',
+      isActive: location.pathname === '/app',
+      onClick: () => navigate('/app'),
+    },
+    {
+      label: 'Collaboration',
+      isActive: location.pathname === '/collaboration',
+      onClick: () => navigate('/collaboration'),
+    },
+    {
+      label: 'Recruitment',
+      isActive: location.pathname === '/admin/recruitment',
+      onClick: () => navigate('/admin/recruitment'),
+    },
+    {
+      label: 'Admin',
+      isActive: location.pathname === '/admin',
+      onClick: () => navigate('/admin'),
+    },
+  ];
+
+  const renderNavButton = (item: { label: string; isActive: boolean; onClick: () => void }) => (
+    <Button
+      key={item.label}
+      onClick={item.onClick}
+      className={item.label === 'Projects' || item.label === 'Calendar' ? 'css-3s7v68' : undefined}
+      variant="ghost"
+      justifyContent="flex-start"
+      px={3}
+      py={2}
+      h="auto"
+      borderRadius="md"
+      fontSize="0.95rem"
+      fontWeight={600}
+      letterSpacing="0.02em"
+      color={item.isActive ? '#7ee8d6' : 'var(--font-color)'}
+      bg={item.isActive ? 'rgba(126, 232, 214, 0.16)' : 'transparent'}
+      w="full"
+      _hover={{
+        color: '#7ee8d6',
+        bg: 'rgba(126, 232, 214, 0.12)',
+      }}
+    >
+      {item.label}
+    </Button>
+  );
+
   return (
     <Flex
       as="aside"
@@ -84,48 +110,7 @@ const SideNavbar = ({ onLogoutClick }: SideNavbarProps) => {
         <Image src={logoImage} alt="Task Manager logo" maxW="150px" mb={6} />
 
         <Stack spacing={2}>
-          {isAdmin ? (
-            <>
-              <Text as={NavLink} to="/app" sx={navLinkSx}>
-                Tasks
-              </Text>
-              <Text as={NavLink} to="/collaboration" sx={navLinkSx}>
-                Collaboration
-              </Text>
-              <Text as={NavLink} to="/admin/recruitment" sx={navLinkSx}>
-                Recruitment AI Copilot
-              </Text>
-              <Text as={NavLink} to="/admin" sx={navLinkSx}>
-                Admin
-              </Text>
-            </>
-          ) : (
-            employeeNavItems.map((item) => (
-              <Button
-                key={item.label}
-                onClick={item.onClick}
-                className={item.label === 'Projects' || item.label === 'Calendar' ? 'css-3s7v68' : undefined}
-                variant="ghost"
-                justifyContent="flex-start"
-                px={3}
-                py={2}
-                h="auto"
-                borderRadius="md"
-                fontSize="0.95rem"
-                fontWeight={600}
-                letterSpacing="0.02em"
-                color={item.isActive ? '#7ee8d6' : 'var(--font-color)'}
-                bg={item.isActive ? 'rgba(126, 232, 214, 0.16)' : 'transparent'}
-                w="full"
-                _hover={{
-                  color: '#7ee8d6',
-                  bg: 'rgba(126, 232, 214, 0.12)',
-                }}
-              >
-                {item.label}
-              </Button>
-            ))
-          )}
+          {(isAdmin ? adminNavItems : employeeNavItems).map(renderNavButton)}
         </Stack>
       </Box>
 

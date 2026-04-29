@@ -52,7 +52,11 @@ interface ChatMessage {
 
 const createMessageId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-const RecruitmentPage = () => {
+interface RecruitmentPageProps {
+  embedded?: boolean;
+}
+
+const RecruitmentPage = ({ embedded = false }: RecruitmentPageProps) => {
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -349,10 +353,8 @@ const RecruitmentPage = () => {
     return value.length > 72 ? `${value.slice(0, 72).trimEnd()}...` : value;
   };
 
-  return (
-    <Flex bg="var(--light-color)" minH="100vh">
-      <SideNavbar onLogoutClick={handleLogout} />
-      <Stack flex={1} maxW="1450px" spacing={6} px={{ base: 4, md: 8 }} py={{ base: 6, md: 8 }}>
+  const content = (
+      <Stack flex={1} maxW={embedded ? 'none' : '1450px'} spacing={6} px={embedded ? 0 : { base: 4, md: 8 }} py={embedded ? 0 : { base: 6, md: 8 }}>
         <Flex justify="space-between" align="center" gap={3}>
           <Box>
             <Heading size="lg" color="var(--font-color)">
@@ -668,6 +670,16 @@ const RecruitmentPage = () => {
           </Box>
         </Grid>
       </Stack>
+  );
+
+  if (embedded) {
+    return content;
+  }
+
+  return (
+    <Flex bg="var(--light-color)" minH="100vh">
+      <SideNavbar onLogoutClick={handleLogout} />
+      {content}
     </Flex>
   );
 };

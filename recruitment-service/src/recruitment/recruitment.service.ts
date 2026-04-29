@@ -232,6 +232,20 @@ export class RecruitmentService implements OnModuleInit {
 		}));
 	}
 
+	async closeJobOffer(jobOfferId: string) {
+		const normalizedJobOfferId = jobOfferId.trim();
+		if (!isValidObjectId(normalizedJobOfferId)) {
+			throw new BadRequestException('Invalid jobOfferId format.');
+		}
+
+		const deleted = await this.jobOfferModel.findByIdAndDelete(normalizedJobOfferId).lean();
+		if (!deleted) {
+			throw new NotFoundException('JobOffer not found.');
+		}
+
+		return { ok: true, jobOfferId: normalizedJobOfferId };
+	}
+
 	async getApplicationByToken(token: string) {
 		const normalizedToken = token.trim();
 		if (!normalizedToken) {
