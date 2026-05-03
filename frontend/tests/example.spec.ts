@@ -3,7 +3,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 
-const url = process.env.HOST_URL
+const url = process.env.HOST_URL ?? 'http://localhost:5173';
 test('should display the login page', async ({ page }) => {
   await page.goto(url + '/login');
   await expect(page.locator('h1')).toHaveText('Login');

@@ -1,1 +1,0 @@
-Backend engineer with 4 years of experience in Node.js, MongoDB, TypeScript, NestJS, and Docker.

@@ -66,6 +66,8 @@ Recommended startup order is handled by Compose:
 
 ## Environment Variables
 
+Each service now has a local `.env` and `.env.example` file, and the repository root has a matching pair for Compose-level defaults.
+
 The compose file accepts these common values:
 
 - `JWT_SECRET`
@@ -74,8 +76,16 @@ The compose file accepts these common values:
 - `POSTGRES_DB`
 - `CONVERSATION_SERVICE_HOST`
 - `CONVERSATION_SERVICE_PORT`
+- `VITE_API_BASE_URL` in `frontend/.env`
+- `HOST_URL` in `frontend/.env`
 
 You can keep the defaults for local development unless you need to customize credentials or service routing.
+
+If you run services directly instead of through Docker Compose, start with the matching `.env.example` in each service directory and copy it to `.env`.
+
+## Dockerfiles
+
+The service Dockerfiles now follow one shared layout: Node 20 slim, retry-aware `npm ci`, a build step, and a single runtime command. The frontend keeps Vite preview as its container entrypoint and exposes port 5173.
 
 ## Local Development
 

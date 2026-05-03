@@ -1,4 +1,5 @@
-# Use Node.js as the base image
+# syntax=docker/dockerfile:1.7
+
 FROM node:20-slim
 
 WORKDIR /usr/src/app
