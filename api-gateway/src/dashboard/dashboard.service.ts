@@ -10,6 +10,7 @@ type TaskRecord = {
   priority?: 'LOW' | 'MEDIUM' | 'HIGH';
   assignedTo?: string;
   conversationId?: string | null;
+  projectId?: string | null;
   dueDate?: string | Date | null;
 };
 

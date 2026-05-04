@@ -26,7 +26,6 @@ import {
   CardBody,
   Text,
   VStack,
-  HStack,
 } from '@chakra-ui/react';
 import { ProjectMetrics } from '../../types/analytics';
 
@@ -192,7 +191,6 @@ const WorkloadDistributionTable: React.FC<{ project: ProjectMetrics }> = ({ proj
  */
 export const ProjectMetricsView: React.FC<ProjectMetricsViewProps> = ({
   projects,
-  isLoading,
 }) => {
   if (projects.length === 0) {
     return (
@@ -225,7 +223,7 @@ export const ProjectMetricsView: React.FC<ProjectMetricsViewProps> = ({
 
         <Tabs>
           <TabList mb={4}>
-            {projects.map((project, idx) => (
+            {projects.map((project) => (
               <Tab key={project.projectId}>{project.name}</Tab>
             ))}
           </TabList>

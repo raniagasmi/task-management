@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Badge, Box, Button, Flex, Image, Stack, Text } from '@chakra-ui/react';
+import { Badge, Box, Button, Flex, Image, Stack } from '@chakra-ui/react';
 import { authService } from '../../services/auth.service';
 import { UserRole } from '../../types/user';
 import logoImage from '../../assets/images/logo.png';

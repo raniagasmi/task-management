@@ -1,10 +1,7 @@
-import api from './api.service';
-import { API_ENDPOINTS } from '../config/api.config';
 import {
   EmployeeMetrics,
   ProjectMetrics,
   Alert,
-  TaskRisk,
   AdminDashboardData,
   TimeTrackingSession,
 } from '../types/analytics';
@@ -40,7 +37,6 @@ class AdminAnalyticsService {
       return sum + priorityValue;
     }, 0);
 
-    const avgLoad = taskCount > 0 ? weightedLoad / taskCount : 0;
     const isOverloaded = weightedLoad > 20; // threshold
     const isUnderutilized = weightedLoad < 3 && taskCount > 0;
 
@@ -125,7 +121,6 @@ class AdminAnalyticsService {
       if (task.dueDate) {
         const dueTime = new Date(task.dueDate).getTime();
         const daysUntilDue = (dueTime - now) / (1000 * 60 * 60 * 24);
-        const progress = task.status === TaskStatus.IN_PROGRESS ? 50 : 0;
 
         if (daysUntilDue < 0) {
           tasksOverdue++;

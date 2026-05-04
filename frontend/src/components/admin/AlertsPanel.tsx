@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Box,
   Flex,
@@ -143,7 +143,6 @@ const AlertItem: React.FC<{ alert: Alert; onResolve?: (alert: Alert) => void }> 
 export const AlertsPanel: React.FC<AlertsPanelProps> = ({
   alerts,
   onResolve,
-  isLoading,
 }) => {
   const unresolvedAlerts = alerts.filter((a) => !a.isResolved);
   const resolvedAlerts = alerts.filter((a) => a.isResolved);

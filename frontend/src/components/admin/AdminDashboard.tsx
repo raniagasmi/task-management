@@ -42,7 +42,6 @@ interface AdminDashboardProps {
  */
 const DashboardOverview: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
   const { dashboardData, isLoading } = useAdminDashboard(isAdmin);
-  const { currentStatus, focusTime } = useTimeTracking(authService.getCurrentUser()?.id);
 
   if (isLoading) {
     return (
@@ -110,12 +109,13 @@ const DashboardOverview: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
  */
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isAdmin }) => {
   const { dashboardData, isLoading, error } = useAdminDashboard(isAdmin);
-  const { currentStatus, focusTime, togglePause } = useTimeTracking(
+  const { currentStatus, togglePause } = useTimeTracking(
     authService.getCurrentUser()?.id
   );
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeMetrics | null>(null);
   const toast = useToast();
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleResolveAlert = (alertId: string) => {
     toast({
       title: 'Alert marked as resolved',

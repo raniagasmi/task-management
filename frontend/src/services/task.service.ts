@@ -3,7 +3,15 @@ import { Task, TaskStatus, TaskPriority } from '../types/task';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../config/api.config';
 
-interface CreateTaskDto {
+interface Reminder {
+  id: string;
+  taskId: string;
+  remindAt: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateTaskDto {
   title: string;
   description?: string;
   status: TaskStatus;
@@ -16,7 +24,7 @@ interface CreateTaskDto {
  
 }
 
-interface UpdateTaskDto {
+export interface UpdateTaskDto {
   title?: string;
   description?: string;
   priority?: TaskPriority;
@@ -175,9 +183,9 @@ class TaskService {
     }
   }
 
-  async createTaskReminder(taskId: string, remindAt: Date): Promise<any> {
+  async createTaskReminder(taskId: string, remindAt: Date): Promise<Reminder> {
     try {
-      const response = await api.post(API_ENDPOINTS.TASKS.REMINDERS_CREATE(taskId), {
+      const response = await api.post<Reminder>(API_ENDPOINTS.TASKS.REMINDERS_CREATE(taskId), {
         remindAt: remindAt.toISOString(),
       });
       return response.data;
@@ -190,9 +198,9 @@ class TaskService {
     }
   }
 
-  async listMyReminders(): Promise<any[]> {
+  async listMyReminders(): Promise<Reminder[]> {
     try {
-      const response = await api.get<any[]>(API_ENDPOINTS.TASKS.REMINDERS_ME);
+      const response = await api.get<Reminder[]>(API_ENDPOINTS.TASKS.REMINDERS_ME);
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Badge,
   Box,
@@ -98,7 +98,7 @@ const AdminRecruitmentPage = () => {
     [jobs, selectedJobId],
   );
 
-  const loadJobs = async () => {
+  const loadJobs = useCallback(async () => {
     const nextJobs = await recruitmentService.listRecruitmentJobs();
     setJobs(nextJobs);
     if ((!selectedJobId || !nextJobs.some((job) => job.jobOfferId === selectedJobId)) && nextJobs.length > 0) {
@@ -106,7 +106,7 @@ const AdminRecruitmentPage = () => {
     } else if (nextJobs.length === 0) {
       setSelectedJobId('');
     }
-  };
+  }, [selectedJobId]);
 
   const loadApplications = async (jobOfferId: string, status?: ApplicationStatus) => {
     if (!jobOfferId) {
@@ -125,7 +125,7 @@ const AdminRecruitmentPage = () => {
 
   useEffect(() => {
     void loadJobs();
-  }, []);
+  }, [loadJobs]);
 
   useEffect(() => {
     if (!selectedJobId) return;

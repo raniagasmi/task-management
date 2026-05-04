@@ -78,18 +78,6 @@ const ChatWindow = ({
     'I will follow up after I check the dependencies.',
   ];
 
-  const presenceColor = (status?: string) => {
-    if (status === 'ONLINE') {
-      return 'green.400';
-    }
-
-    if (status === 'PAUSE') {
-      return 'yellow.400';
-    }
-
-    return 'gray.400';
-  };
-
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, proposals, isAiThinking, typingLabel, searchQuery]);
